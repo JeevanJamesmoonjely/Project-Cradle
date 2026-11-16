@@ -15,13 +15,14 @@ export const MartianSky: React.FC = () => {
   const dirLightRef = useRef<THREE.DirectionalLight>(null);
   const ambientLightRef = useRef<THREE.AmbientLight>(null);
   const skyDomeRef = useRef<THREE.Mesh>(null);
+  const starsRef = useRef<THREE.Points>(null);
   const sunGroupRef = useRef<THREE.Group>(null);
   const sunSphereRef = useRef<THREE.Mesh>(null);
   const phobosGroupRef = useRef<THREE.Group>(null);
   const phobosMeshRef = useRef<THREE.Mesh>(null);
   const deimosGroupRef = useRef<THREE.Group>(null);
   const deimosMeshRef = useRef<THREE.Mesh>(null);
-  const { scene } = useThree();
+  const { scene, camera } = useThree();
 
   const timeOfDay = useMissionStore((s) => s.env.timeOfDay);
   const dustTau = useMissionStore((s) => s.env.dustTau);
@@ -46,47 +47,104 @@ export const MartianSky: React.FC = () => {
   }, []);
 
   // Scientific Non-Spherical Potato Asteroid Geometries
-  // Phobos: 26.8 x 22.4 x 18.4 km with Stickney crater bowl and radial grooves
   const phobosGeo = useMemo(() => createPhobosGeometry(), []);
-  // Deimos: 15.0 x 12.2 x 10.4 km with smooth regolith blankets
   const deimosGeo = useMemo(() => createDeimosGeometry(), []);
 
-  // Sky Gradient Hemisphere Dome Geometry
-  const skyDomeGeo = useMemo(() => {
-    const geo = new THREE.SphereGeometry(4700, 48, 32, 0, Math.PI * 2, 0, Math.PI * 0.52);
-    const pos = geo.attributes.position;
-    const colors = new Float32Array(pos.count * 3);
+  // =========================================================================
+  // AUTHENTIC NASA MARS ATMOSPHERE SHADER (MIE SCATTERING BY DUST AEROSOLS)
+  // Recreates the true butterscotch-apricot daytime sky, dusty salmon mid-elevations,
+  // rust-mauve zenith, forward Mie-scattering blue solar halo, and cobalt blue twilight.
+  // =========================================================================
+  const skyShaderUniforms = useMemo(
+    () => ({
+      uSunPosition: { value: new THREE.Vector3(0, 1, 0) },
+      uSunElevation: { value: 0.8 },
+      uDustTau: { value: 0.44 },
+    }),
+    []
+  );
 
-    const horizonWarmAmber = new THREE.Color('#d47a4c');
-    const midAmberClay = new THREE.Color('#94422e');
-    const zenithDarkRust = new THREE.Color('#42181d');
-    const spaceIndigo = new THREE.Color('#100818');
+  const skyShaderMaterial = useMemo(() => {
+    return new THREE.ShaderMaterial({
+      uniforms: skyShaderUniforms,
+      vertexShader: `
+        varying vec3 vWorldPosition;
+        void main() {
+          vec4 worldPos = modelMatrix * vec4(position, 1.0);
+          vWorldPosition = worldPos.xyz;
+          gl_Position = projectionMatrix * viewMatrix * worldPos;
+        }
+      `,
+      fragmentShader: `
+        uniform vec3 uSunPosition;
+        uniform float uSunElevation;
+        uniform float uDustTau;
+        varying vec3 vWorldPosition;
 
-    for (let i = 0; i < pos.count; i++) {
-      const y = pos.getY(i);
-      const normY = Math.max(0, Math.min(1, y / 4700));
+        void main() {
+          vec3 dir = normalize(vWorldPosition);
+          float height = clamp(dir.y, 0.0, 1.0);
+          vec3 sunDir = normalize(uSunPosition);
+          float cosGamma = clamp(dot(dir, sunDir), -1.0, 1.0);
 
-      let c = new THREE.Color();
-      if (normY < 0.22) {
-        c.copy(horizonWarmAmber).lerp(midAmberClay, normY / 0.22);
-      } else if (normY < 0.65) {
-        c.copy(midAmberClay).lerp(zenithDarkRust, (normY - 0.22) / 0.43);
-      } else {
-        c.copy(zenithDarkRust).lerp(spaceIndigo, (normY - 0.65) / 0.35);
-      }
+          // Day / sunset / night transitions based on sun elevation
+          float dayFactor = smoothstep(-0.10, 0.15, uSunElevation);
+          float sunsetFactor = smoothstep(0.35, 0.0, abs(uSunElevation - 0.05));
 
-      colors[i * 3] = c.r;
-      colors[i * 3 + 1] = c.g;
-      colors[i * 3 + 2] = c.b;
-    }
+          // NASA Curiosity & Perseverance True Colors:
+          // Horizon: Luminous warm butterscotch ochre
+          vec3 horizonDay = vec3(0.92, 0.65, 0.45);
+          // Mid-Sky: Warm salmon-apricot terracotta
+          vec3 midDay     = vec3(0.82, 0.48, 0.32);
+          // Zenith: Dusky rust-amber
+          vec3 zenithDay  = vec3(0.55, 0.25, 0.18);
 
-    geo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-    return geo;
-  }, []);
+          // Sunset Sky:
+          vec3 horizonSunset = vec3(0.72, 0.40, 0.35);
+          vec3 zenithSunset  = vec3(0.28, 0.12, 0.20);
 
-  // Starfield for deep space twilight
+          // Cosmic Night:
+          vec3 horizonNight = vec3(0.04, 0.06, 0.10);
+          vec3 zenithNight  = vec3(0.012, 0.016, 0.035);
+
+          // Blend elevation gradient
+          vec3 dayAtmosphere = mix(horizonDay, midDay, smoothstep(0.0, 0.35, height));
+          dayAtmosphere = mix(dayAtmosphere, zenithDay, smoothstep(0.35, 0.90, height));
+
+          vec3 sunsetAtmosphere = mix(horizonSunset, zenithSunset, smoothstep(0.0, 0.70, height));
+          vec3 nightAtmosphere  = mix(horizonNight, zenithNight, smoothstep(0.0, 0.60, height));
+
+          vec3 baseAtmosphere = mix(nightAtmosphere, sunsetAtmosphere, sunsetFactor * dayFactor);
+          baseAtmosphere = mix(baseAtmosphere, dayAtmosphere, dayFactor * (1.0 - sunsetFactor * 0.7));
+
+          // Forward Mie Scattering (Iconic Martian Blue Twilight / Sun Halo)
+          // Forward lobe: dust scatters blue light preferentially in forward direction
+          float forwardGlow = pow(max(0.0, cosGamma), 3.5);
+          float intenseGlow = pow(max(0.0, cosGamma), 32.0);
+
+          vec3 blueHaloColor = vec3(0.38, 0.72, 0.98); // Electric Martian blue
+          vec3 blueScattering = blueHaloColor * (forwardGlow * 0.95 + intenseGlow * 2.4) * dayFactor;
+
+          // Dust Tau Extinction modifier during regional storms
+          if (uDustTau > 0.8) {
+            float stormFactor = clamp((uDustTau - 0.8) * 0.7, 0.0, 0.8);
+            vec3 stormColor = vec3(0.68, 0.36, 0.20);
+            baseAtmosphere = mix(baseAtmosphere, stormColor, stormFactor);
+            blueScattering *= (1.0 - stormFactor * 0.5);
+          }
+
+          gl_FragColor = vec4(baseAtmosphere + blueScattering, 1.0);
+        }
+      `,
+      side: THREE.BackSide,
+      depthWrite: false,
+      fog: false, // Critical: sky dome is never occluded by distance fog!
+    });
+  }, [skyShaderUniforms]);
+
+  // Starfield for deep space twilight & night
   const starGeo = useMemo(() => {
-    const count = 1400;
+    const count = 1800;
     const positions = new Float32Array(count * 3);
     const colors = new Float32Array(count * 3);
 
@@ -95,10 +153,10 @@ export const MartianSky: React.FC = () => {
       const v = Math.random();
       const theta = u * 2.0 * Math.PI;
       const phi = Math.acos(2.0 * v - 1.0) * 0.48;
-      const r = 4600;
+      const r = 3400;
 
       positions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
-      positions[i * 3 + 1] = Math.abs(r * Math.cos(phi)) + 150;
+      positions[i * 3 + 1] = Math.abs(r * Math.cos(phi)) + 120;
       positions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
 
       const isBright = Math.random() < 0.15;
@@ -132,38 +190,43 @@ export const MartianSky: React.FC = () => {
   }, [starTexture, timeOfDay]);
 
   useFrame(() => {
+    // 1. Center sky dome and stars on camera so they never clip or shift
+    if (skyDomeRef.current) {
+      skyDomeRef.current.position.copy(camera.position);
+    }
+    if (starsRef.current) {
+      starsRef.current.position.copy(camera.position);
+    }
+
     // Diurnal Cycle: calculate sun azimuth and elevation
     const sunAngle = (timeOfDay / 24) * Math.PI * 2 - Math.PI / 2;
     const sunElevation = Math.sin(sunAngle);
     const sunAzimuth = Math.cos(sunAngle);
 
     const isDay = sunElevation > -0.08;
-    const sunIntensity = Math.max(0, Math.sin(Math.max(0, sunElevation) * Math.PI)) * 1.85;
 
     // Atmospheric Dust Extinction (Optical Depth Tau)
     const currentDustTau = dustTau || 0.44;
 
-    let fogColor = new THREE.Color('#0a0710');
-    let skyLightColor = new THREE.Color('#140b12');
+    // Update custom sky shader uniforms
+    skyShaderUniforms.uSunPosition.value.set(sunAzimuth, Math.max(-0.2, sunElevation), -0.32).normalize();
+    skyShaderUniforms.uSunElevation.value = sunElevation;
+    skyShaderUniforms.uDustTau.value = currentDustTau;
 
-    if (isDay) {
-      if (sunElevation < 0.25) {
-        fogColor = new THREE.Color('#aa4b2a').lerp(new THREE.Color('#5a2838'), 0.4);
-        skyLightColor = new THREE.Color('#e07842');
-      } else {
-        fogColor = new THREE.Color('#b8542c').lerp(new THREE.Color('#cb693a'), 0.5);
-        skyLightColor = new THREE.Color('#f59a68');
-      }
-    }
+    // Atmospheric horizon haze smoothly blending distant terrain with the sky
+    const horizonHazeColor = isDay
+      ? new THREE.Color('#df966e').lerp(new THREE.Color('#e8a478'), Math.max(0, sunElevation))
+      : new THREE.Color('#0a0d18');
 
     if (currentDustTau > 1.0) {
-      fogColor.lerp(new THREE.Color('#5c2818'), Math.min(0.8, (currentDustTau - 1.0) * 0.6));
+      horizonHazeColor.lerp(new THREE.Color('#6c301a'), Math.min(0.7, (currentDustTau - 1.0) * 0.5));
     }
 
-    scene.fog = new THREE.Fog(fogColor, 140, 4300);
-    scene.background = fogColor;
+    // Fog blends distant terrain into the horizon without occluding the sky dome
+    scene.fog = new THREE.Fog(horizonHazeColor, 220, 4200);
+    scene.background = null;
 
-    // Dynamically center directional sunlight around rover for crisp shadows
+    // Dynamically center directional sunlight around rover for crisp, clear shadows
     const roverPos = useMissionStore.getState().rover.position;
     if (dirLightRef.current) {
       const sunDist = 180;
@@ -175,19 +238,26 @@ export const MartianSky: React.FC = () => {
       dirLightRef.current.target.position.set(roverPos[0], roverPos[1], roverPos[2]);
       dirLightRef.current.target.updateMatrixWorld();
 
-      dirLightRef.current.intensity = sunIntensity;
-      dirLightRef.current.color = isDay ? new THREE.Color('#fff2e2') : new THREE.Color('#556f96');
+      // Clear, radiant Martian direct sunlight
+      dirLightRef.current.intensity = isDay
+        ? 2.4 * Math.sin(Math.max(0, sunElevation) * Math.PI) + 0.35
+        : 0.05;
+      dirLightRef.current.color = isDay ? new THREE.Color('#fff7ec') : new THREE.Color('#6882a8');
     }
 
     if (ambientLightRef.current) {
-      ambientLightRef.current.color = skyLightColor;
-      ambientLightRef.current.intensity = isDay ? 0.55 + sunElevation * 0.25 : 0.14;
+      ambientLightRef.current.color = isDay ? new THREE.Color('#f3a778') : new THREE.Color('#141828');
+      ambientLightRef.current.intensity = isDay ? 0.65 + Math.max(0, sunElevation) * 0.25 : 0.15;
     }
 
-    // Sun Disc & Corona
+    // Sun Disc & Corona Halo centered on camera
     if (sunGroupRef.current) {
-      const sunDist = 4400;
-      sunGroupRef.current.position.set(sunAzimuth * sunDist, sunElevation * sunDist, -1400);
+      const sunDist = 3200;
+      sunGroupRef.current.position.set(
+        camera.position.x + sunAzimuth * sunDist,
+        camera.position.y + sunElevation * sunDist,
+        camera.position.z - 1100
+      );
       sunGroupRef.current.visible = isDay;
     }
 
@@ -198,40 +268,44 @@ export const MartianSky: React.FC = () => {
     // 1. Phobos: Rapid 7.65h Prograde Orbit (Rises in WEST, sets in EAST!)
     if (phobosGroupRef.current) {
       const [px, py, pz] = ephemeris.phobos.position;
-      phobosGroupRef.current.position.set(px, py, pz);
-      phobosGroupRef.current.lookAt(0, 50, 0); // Tidally locked towards Mars
+      phobosGroupRef.current.position.set(
+        camera.position.x + px * 0.75,
+        camera.position.y + py * 0.75,
+        camera.position.z + pz * 0.75
+      );
+      phobosGroupRef.current.lookAt(camera.position.x, camera.position.y, camera.position.z);
 
-      // Slowly rotate mesh to track orbital orientation
       if (phobosMeshRef.current) {
         phobosMeshRef.current.rotation.y = timeOfDay * 0.18;
       }
-
-      // Hide when dipped below horizon
       phobosGroupRef.current.visible = py > -150;
     }
 
     // 2. Deimos: Slow 30.35h Retrograde-Appearing Orbit (Rises in EAST, sets in WEST!)
     if (deimosGroupRef.current) {
       const [dx, dy, dz] = ephemeris.deimos.position;
-      deimosGroupRef.current.position.set(dx, dy, dz);
-      deimosGroupRef.current.lookAt(0, 50, 0);
+      deimosGroupRef.current.position.set(
+        camera.position.x + dx * 0.75,
+        camera.position.y + dy * 0.75,
+        camera.position.z + dz * 0.75
+      );
+      deimosGroupRef.current.lookAt(camera.position.x, camera.position.y, camera.position.z);
 
       if (deimosMeshRef.current) {
         deimosMeshRef.current.rotation.y = timeOfDay * 0.05;
       }
-
       deimosGroupRef.current.visible = dy > -150;
     }
   });
 
   return (
     <>
-      {/* 1. Inverted Atmospheric Sky Gradient Dome */}
-      <mesh ref={skyDomeRef} geometry={skyDomeGeo}>
-        <meshBasicMaterial vertexColors side={THREE.BackSide} />
+      {/* 1. Inverted Authentic Mie-Scattered Sky Gradient Dome (Never occluded by fog) */}
+      <mesh ref={skyDomeRef} material={skyShaderMaterial}>
+        <sphereGeometry args={[3600, 48, 28]} />
       </mesh>
 
-      {/* 2. Directional Raking Sunlight with Soft Shadow Cascades (Centered on rover) */}
+      {/* 2. Directional Raking Sunlight with Soft Shadow Cascades */}
       <directionalLight
         ref={dirLightRef}
         castShadow
@@ -239,10 +313,10 @@ export const MartianSky: React.FC = () => {
         shadow-mapSize-height={2048}
         shadow-camera-near={1.0}
         shadow-camera-far={320}
-        shadow-camera-left={-35}
-        shadow-camera-right={35}
-        shadow-camera-top={35}
-        shadow-camera-bottom={-35}
+        shadow-camera-left={-45}
+        shadow-camera-right={45}
+        shadow-camera-top={45}
+        shadow-camera-bottom={-45}
         shadow-bias={-0.0002}
         shadow-normalBias={0.035}
       />
@@ -250,18 +324,12 @@ export const MartianSky: React.FC = () => {
       {/* 3. Ambient Light & Warm Regolith Ground Bounce */}
       <ambientLight ref={ambientLightRef} />
       <hemisphereLight
-        args={[new THREE.Color('#f59a68'), new THREE.Color('#421a10'), 0.45]}
+        args={[new THREE.Color('#f6a87b'), new THREE.Color('#6e2512'), 0.7]}
       />
 
-      {/* 4. REAL MOON 1: PHOBOS (Fear) */}
-      {/* Authentic 26.8 x 22.4 x 18.4 km irregular potato body with Stickney crater bowl & grooves */}
-      {/* Rises in the WEST and sets in the EAST every 4.3 hours */}
+      {/* 4. REAL MOON 1: PHOBOS */}
       <group ref={phobosGroupRef}>
-        <mesh
-          ref={phobosMeshRef}
-          geometry={phobosGeo}
-          scale={[160, 160, 160]}
-        >
+        <mesh ref={phobosMeshRef} geometry={phobosGeo} scale={[130, 130, 130]}>
           {phobosTexture ? (
             <meshStandardMaterial
               map={phobosTexture}
@@ -274,9 +342,7 @@ export const MartianSky: React.FC = () => {
             <meshStandardMaterial color="#4a423e" roughness={0.92} />
           )}
         </mesh>
-
-        {/* Subtle Ethereal Limb Glow / Space Backlight */}
-        <mesh scale={[165, 165, 165]} geometry={phobosGeo}>
+        <mesh scale={[135, 135, 135]} geometry={phobosGeo}>
           <meshBasicMaterial
             color="#818cf8"
             transparent
@@ -287,15 +353,9 @@ export const MartianSky: React.FC = () => {
         </mesh>
       </group>
 
-      {/* 5. REAL MOON 2: DEIMOS (Dread) */}
-      {/* Authentic 15.0 x 12.2 x 10.4 km smooth regolith-blanketed irregular body */}
-      {/* Rises in the EAST and sets in the WEST slowly over 65 hours */}
+      {/* 5. REAL MOON 2: DEIMOS */}
       <group ref={deimosGroupRef}>
-        <mesh
-          ref={deimosMeshRef}
-          geometry={deimosGeo}
-          scale={[44, 44, 44]}
-        >
+        <mesh ref={deimosMeshRef} geometry={deimosGeo} scale={[38, 38, 38]}>
           {deimosTexture ? (
             <meshStandardMaterial
               map={deimosTexture}
@@ -308,9 +368,7 @@ export const MartianSky: React.FC = () => {
             <meshStandardMaterial color="#5c4e46" roughness={0.94} />
           )}
         </mesh>
-
-        {/* Delicate Starlight Glimmer */}
-        <mesh scale={[48, 48, 48]} geometry={deimosGeo}>
+        <mesh scale={[42, 42, 42]} geometry={deimosGeo}>
           <meshBasicMaterial
             color="#fed7aa"
             transparent
@@ -321,31 +379,31 @@ export const MartianSky: React.FC = () => {
         </mesh>
       </group>
 
-      {/* 6. Martian Sun Disc & Atmospheric Corona Halo */}
+      {/* 6. Martian Sun Disc & Atmospheric Forward-Scattering Corona Halo */}
       <group ref={sunGroupRef}>
         {/* Core Sun Disc */}
         <mesh ref={sunSphereRef}>
-          <sphereGeometry args={[75, 32, 32]} />
-          <meshBasicMaterial color="#fffaf0" />
+          <sphereGeometry args={[55, 32, 32]} />
+          <meshBasicMaterial color="#fffef8" />
         </mesh>
-        {/* Soft Blue Rayleigh Corona Halo (Characteristic Martian Blue Sunset) */}
+        {/* Soft Blue Rayleigh Corona Halo (Characteristic Martian Blue Twilight / Sun Flare) */}
         <mesh>
-          <sphereGeometry args={[130, 32, 32]} />
+          <sphereGeometry args={[115, 32, 32]} />
           <meshBasicMaterial
             color="#60a5fa"
             transparent
-            opacity={0.35}
+            opacity={0.4}
             blending={THREE.AdditiveBlending}
             side={THREE.BackSide}
           />
         </mesh>
         {/* Outer Solar Glare */}
         <mesh>
-          <sphereGeometry args={[260, 32, 32]} />
+          <sphereGeometry args={[230, 32, 32]} />
           <meshBasicMaterial
             color="#38bdf8"
             transparent
-            opacity={0.15}
+            opacity={0.18}
             blending={THREE.AdditiveBlending}
             side={THREE.BackSide}
           />
@@ -353,7 +411,7 @@ export const MartianSky: React.FC = () => {
       </group>
 
       {/* 7. Twinkling Starfield in Upper Atmosphere with smooth circular stars */}
-      <points geometry={starGeo} material={starMaterial} />
+      <points ref={starsRef} geometry={starGeo} material={starMaterial} />
     </>
   );
 };

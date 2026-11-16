@@ -563,6 +563,35 @@ export const HUDOverlay: React.FC = () => {
             </div>
           )}
 
+          {/* 1. Critical Battery Depletion Alert Banner */}
+          {deployment.status === 'deployed' && rover.battery <= 0 && (
+            <div className="flex items-center gap-3.5 rounded-2xl border-2 border-red-500/90 bg-black/95 px-5 py-2.5 backdrop-blur-xl shadow-[0_0_35px_rgba(239,68,68,0.55)] animate-pulse font-mono">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-red-600/30 border border-red-500 text-red-400">
+                <BatteryWarning className="h-5 w-5 animate-bounce" />
+              </div>
+              <div className="flex flex-col">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-black tracking-widest text-red-400">
+                    CRITICAL POWER FAILURE // BATTERY DEPLETED (0%)
+                  </span>
+                  <span className="rounded bg-red-950 px-1.5 py-0.2 text-[9px] font-bold text-red-300 border border-red-500/50">
+                    IMMOBILIZED
+                  </span>
+                </div>
+                <span className="text-[10px] text-zinc-300">
+                  Drive motors disabled. Deploy solar arrays [P] in sunlight to restore power.
+                </span>
+              </div>
+              <button
+                onClick={toggleSolarCharging}
+                className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-lg shadow-amber-500/30 hover:scale-105 active:scale-95 cursor-pointer ml-1 shrink-0"
+              >
+                <Sun className="h-3.5 w-3.5" />
+                <span>CHARGE [P]</span>
+              </button>
+            </div>
+          )}
+
           {/* 2. Mars Base Habitat Docking Prompt */}
           {deployment.status === 'deployed' && motherShip.isDocked && (
             <div className="flex items-center gap-3 rounded-full border border-amber-400/80 bg-black/90 px-4 py-2 backdrop-blur-md shadow-[0_0_25px_rgba(245,158,11,0.4)] animate-in slide-in-from-bottom-2 duration-200">

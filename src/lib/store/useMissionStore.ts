@@ -399,17 +399,23 @@ export const useMissionStore = create<MissionStore>((set, get) => ({
     if (isSolarCharging) {
       // Deployed solar array wings absorb direct + diffuse ambient sunlight
       solarWatts = Math.round(solarWatts * 2.2);
-      updatedBattery += deltaSeconds * (meda.solarInsolationWatts > 80 ? 9.5 : 2.5) * dustCleanFactor;
+      // Authentic solar charging: in direct midday Martian sun (550+ W/m²), charges ~0.50% per second (~3 mins for full 0-100% recharge)
+      // At lower sun elevations it charges proportionally less; at night (0 W) it cannot charge.
+      const sunRatio = Math.max(0, meda.solarInsolationWatts / 550);
+      const chargeRatePerSec = sunRatio * 0.50 * dustCleanFactor;
+      updatedBattery += deltaSeconds * chargeRatePerSec;
     } else {
-      // Natural battery power balance over time
-      // In sub-zero frost conditions (< -70°C), internal heaters draw extra 35W
+      // Passive solar trickle from body-mounted panels vs baseline standby avionics consumption
+      const passiveRatePerSec = (Math.max(0, meda.solarInsolationWatts) / 550) * 0.04 * dustCleanFactor;
       const heaterWatts = meda.airTemp < -70 ? 35 : 0;
-      const netPowerWatts = solarWatts - (rover.consumptionWatts + heaterWatts);
-      const batteryDelta = (netPowerWatts / 2500) * hourDelta * 100;
-      updatedBattery += batteryDelta;
+      const avionicsDrainRatePerSec = ((rover.consumptionWatts + heaterWatts) / 2500) * 0.03;
+      updatedBattery += deltaSeconds * (passiveRatePerSec - avionicsDrainRatePerSec);
     }
 
     updatedBattery = Math.max(0, Math.min(100, updatedBattery));
+    if (updatedBattery < 0.05) {
+      updatedBattery = 0;
+    }
 
     // NASA MEDA Dynamic Weather Warning & Meteorological Alert System
     let weatherAlert: WeatherAlert | null = null;

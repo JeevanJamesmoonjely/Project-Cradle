@@ -246,6 +246,38 @@ class PlanetarySoundEngine {
     osc.stop(now + 0.28);
   }
 
+  // Critical battery depletion lockout alarm (authentic NASA telemetry advisory tone)
+  private lastBatteryAlarmTime = 0;
+  public playBatteryDepletedAlarm() {
+    if (!this.ctx || this.isMuted) return;
+    this.ensureRunning();
+    const now = this.ctx.currentTime;
+    if (now - this.lastBatteryAlarmTime < 1.2) return;
+    this.lastBatteryAlarmTime = now;
+
+    // Descending dual chime: 784 Hz (G5) -> 523.25 Hz (C5) -> 392 Hz (G4)
+    const tones = [
+      { freq: 784.0, start: 0, dur: 0.12 },
+      { freq: 523.25, start: 0.12, dur: 0.14 },
+      { freq: 392.0, start: 0.26, dur: 0.28 },
+    ];
+
+    tones.forEach((t) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(t.freq, now + t.start);
+
+      gain.gain.setValueAtTime(0.06, now + t.start);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + t.start + t.dur);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(now + t.start);
+      osc.stop(now + t.start + t.dur);
+    });
+  }
+
   // Dynamic low-frequency atmospheric swirling vortex sound (whoosh and regolith hiss)
   private vortexGain: GainNode | null = null;
   private vortexFilter: BiquadFilterNode | null = null;

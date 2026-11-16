@@ -110,20 +110,36 @@ export const RoverController: React.FC = () => {
       switch (e.code) {
         case 'KeyW':
         case 'ArrowUp':
+          if (useMissionStore.getState().rover.battery <= 0.05) {
+            soundEngine.playBatteryDepletedAlarm();
+            return;
+          }
           if (isSolarCharging) toggleSolarCharging();
           keys.current.forward = true;
           break;
         case 'KeyS':
         case 'ArrowDown':
+          if (useMissionStore.getState().rover.battery <= 0.05) {
+            soundEngine.playBatteryDepletedAlarm();
+            return;
+          }
           if (isSolarCharging) toggleSolarCharging();
           keys.current.backward = true;
           break;
         case 'KeyA':
         case 'ArrowLeft':
+          if (useMissionStore.getState().rover.battery <= 0.05) {
+            soundEngine.playBatteryDepletedAlarm();
+            return;
+          }
           keys.current.left = true;
           break;
         case 'KeyD':
         case 'ArrowRight':
+          if (useMissionStore.getState().rover.battery <= 0.05) {
+            soundEngine.playBatteryDepletedAlarm();
+            return;
+          }
           keys.current.right = true;
           break;
         case 'Space':
@@ -507,7 +523,10 @@ export const RoverController: React.FC = () => {
     const steerSpeed = 3.8;
     const maxSteer = 0.52; // ~30 degrees
     let targetSteer = 0;
-    if (!isHibernating && !isSolarCharging) {
+    const currentBattery = useMissionStore.getState().rover.battery;
+    const isBatteryDepleted = currentBattery <= 0.05;
+
+    if (!isHibernating && !isSolarCharging && !isBatteryDepleted) {
       if (keys.current.left) targetSteer += maxSteer;  // 'A' turns LEFT
       if (keys.current.right) targetSteer -= maxSteer; // 'D' turns RIGHT
     }
@@ -515,12 +534,12 @@ export const RoverController: React.FC = () => {
 
     // 5. Motor Throttle & Gravity Integration
     let throttle = 0;
-    if (!isHibernating && !isScanning && !isSolarCharging) {
+    if (!isHibernating && !isScanning && !isSolarCharging && !isBatteryDepleted) {
       if (keys.current.forward) throttle += 1.0;
       if (keys.current.backward) throttle -= 0.65;
     }
 
-    if (keys.current.brake || isHibernating || isSolarCharging) {
+    if (keys.current.brake || isHibernating || isSolarCharging || isBatteryDepleted) {
       velocity.current = THREE.MathUtils.lerp(velocity.current, 0, dt * 9.0);
     } else if (throttle !== 0) {
       // Net acceleration = Motor force + Gravity downhill pull - Rolling drag
@@ -530,7 +549,7 @@ export const RoverController: React.FC = () => {
 
       // Battery drain based on motor load (climbing uphill in sand draws more current)
       const slopeLoad = Math.max(0, -slopeGravityAccel * 0.15);
-      drainBattery(dt * (0.035 + (currentBiome === 'Dunes' ? 0.04 : 0.0) + slopeLoad));
+      drainBattery(dt * (0.065 + (currentBiome === 'Dunes' ? 0.05 : 0.0) + slopeLoad * 0.1));
     } else {
       // Coasting: gravity can pull rover down hills or rolling drag brings it to rest
       if (Math.abs(slopeGravityAccel) > 0.8) {
