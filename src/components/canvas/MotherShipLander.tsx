@@ -18,25 +18,25 @@ import {
 // Mother Base / Rover Docking Bay Anchor in world coords
 export const LANDER_X = 0;
 export const LANDER_Z = -25;
-export const RAMP_START_Z = -22.8;
-export const RAMP_END_Z = -16.8;
+export const RAMP_START_Z = -23.2;
+export const RAMP_END_Z = -15.5;
 
 // Physically exact ramp and deck surface elevation calculation
 export const getMotherShipRampSurfaceY = (worldX: number, worldZ: number): number | null => {
   const relX = worldX - LANDER_X;
   const relZ = worldZ - LANDER_Z;
   const groundLanderY = getTerrainHeight(LANDER_X, LANDER_Z);
-  const deckY = groundLanderY + 1.14;
+  const deckY = groundLanderY + 1.25;
 
-  // Lander deck cradle area (|relX| <= 2.2, relZ from -2.8 to 1.5)
-  if (relZ >= -2.8 && relZ < 1.5 && Math.abs(relX) <= 2.2) {
+  // Expanded industrial deck cradle area (|relX| <= 3.6, relZ from -5.5 to 1.8)
+  if (relZ >= -5.5 && relZ < 1.8 && Math.abs(relX) <= 3.6) {
     return deckY;
   }
 
-  // Ramp zone: relZ from 1.5 to 8.2, width spanning both wheels (|relX| <= 1.6)
-  if (relZ >= 1.5 && relZ <= 8.2 && Math.abs(relX) <= 1.6) {
-    const groundFootY = getTerrainHeight(LANDER_X, LANDER_Z + 8.2) + 0.04;
-    const t = (relZ - 1.5) / (8.2 - 1.5);
+  // Ramp zone: relZ from 1.8 to 9.5, width spanning both wheels (|relX| <= 2.2)
+  if (relZ >= 1.8 && relZ <= 9.5 && Math.abs(relX) <= 2.2) {
+    const groundFootY = getTerrainHeight(LANDER_X, LANDER_Z + 9.5) + 0.04;
+    const t = (relZ - 1.8) / (9.5 - 1.8);
     return deckY * (1 - t) + groundFootY * t;
   }
   return null;
@@ -212,7 +212,7 @@ export const MotherShipLander: React.FC = () => {
       mavStrobeRef.current.intensity = Math.sin(time * 5.0 + 1.0) > 0.8 ? 3.5 : 0.3;
     }
 
-    // Gentle slow tracking rotation for DSN giant dish (tracking Earth in deep space)
+    // Slow tracking rotation for DSN giant dish (tracking Earth deep space signal)
     if (dsnDishRef.current) {
       dsnDishRef.current.rotation.y = -0.55 + Math.sin(time * 0.04) * 0.12;
       dsnDishRef.current.rotation.x = -0.32 + Math.cos(time * 0.03) * 0.06;
@@ -228,59 +228,53 @@ export const MotherShipLander: React.FC = () => {
   return (
     <group position={[LANDER_X, groundY, LANDER_Z]}>
       {/* =========================================================================
-          1. CENTRAL HABITAT HUB DOME "08" (PRIMARY INFLATABLE BIOSPHERE)
-          Matches reference image: massive white canopy with radial seams,
-          heavy stenciled "08", circular cupola skylights, perimeter anchor ring
+          1. COLOSSAL CENTRAL HABITAT HUB DOME "08" (EXPANDED TO FULL COLONY SCALE)
+          Radius: 25.0m (Diameter: 50.0m), Height: 11.5m
           ========================================================================= */}
-      <group position={[0, 0, -14.5]}>
+      <group position={[0, 0, -31.0]}>
         {/* Main Pressurized Fabric Dome Canopy (Flattened Spherical Profile) */}
         <mesh
           position={[0, 0, 0]}
-          scale={[13.5, 5.2, 13.5]}
+          scale={[25.0, 11.5, 25.0]}
           material={dome08Material}
           castShadow
           receiveShadow
         >
-          {/* Half sphere sliced at equator for dome */}
-          <sphereGeometry args={[1, 48, 28, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+          <sphereGeometry args={[1, 64, 36, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
         </mesh>
 
         {/* Circular Perimeter Inflatable Foundation Collar */}
-        <mesh position={[0, 0.45, 0]} material={whiteAeroMaterial} castShadow receiveShadow>
-          <torusGeometry args={[13.5, 0.65, 16, 64]} />
+        <mesh position={[0, 0.75, 0]} material={whiteAeroMaterial} castShadow receiveShadow>
+          <torusGeometry args={[25.0, 1.2, 20, 80]} />
         </mesh>
 
-        {/* Outer Ground Tie-Down Bedrock Anchors (24 radial tie points) */}
-        {Array.from({ length: 24 }).map((_, i) => {
-          const angle = (i / 24) * Math.PI * 2;
-          const ax = Math.sin(angle) * 14.1;
-          const az = Math.cos(angle) * 14.1;
+        {/* Outer Ground Tie-Down Bedrock Anchors (32 radial tie points) */}
+        {Array.from({ length: 32 }).map((_, i) => {
+          const angle = (i / 32) * Math.PI * 2;
+          const ax = Math.sin(angle) * 26.2;
+          const az = Math.cos(angle) * 26.2;
           return (
-            <group key={i} position={[ax, 0.25, az]}>
-              {/* Ground Anchor Pin */}
+            <group key={i} position={[ax, 0.4, az]}>
               <mesh material={darkTitaniumMaterial}>
-                <boxGeometry args={[0.45, 0.5, 0.45]} />
+                <boxGeometry args={[0.7, 0.8, 0.7]} />
               </mesh>
-              {/* Tension Turnbuckle Cable angled towards dome */}
               <mesh
-                position={[-Math.sin(angle) * 0.4, 0.4, -Math.cos(angle) * 0.4]}
+                position={[-Math.sin(angle) * 0.6, 0.6, -Math.cos(angle) * 0.6]}
                 material={darkTitaniumMaterial}
               >
-                <cylinderGeometry args={[0.03, 0.03, 0.9, 8]} />
+                <cylinderGeometry args={[0.04, 0.04, 1.4, 8]} />
               </mesh>
             </group>
           );
         })}
 
-        {/* Central Observation Cupola & Atmospheric Sensor Mast on Dome Peak */}
-        <group position={[0, 5.2, 0]}>
-          {/* Primary Apex Collar Ring */}
+        {/* Central Observation Cupola & Sensor Mast on Dome Peak */}
+        <group position={[0, 11.5, 0]}>
           <mesh material={darkTitaniumMaterial}>
-            <cylinderGeometry args={[1.6, 1.8, 0.25, 24]} />
+            <cylinderGeometry args={[3.2, 3.6, 0.5, 32]} />
           </mesh>
-          {/* Tinted Quartz Observation Sky Dome */}
-          <mesh position={[0, 0.15, 0]}>
-            <sphereGeometry args={[1.45, 24, 12, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
+          <mesh position={[0, 0.3, 0]}>
+            <sphereGeometry args={[2.9, 32, 16, 0, Math.PI * 2, 0, Math.PI * 0.45]} />
             <meshStandardMaterial
               color="#0f172a"
               emissive="#0284c7"
@@ -289,870 +283,444 @@ export const MotherShipLander: React.FC = () => {
               metalness={0.9}
             />
           </mesh>
-          {/* Interior Biosphere Warm Glow emitting through cupola */}
-          <pointLight color="#fef08a" intensity={1.8} distance={14} position={[0, 0.2, 0]} />
+          <pointLight color="#fef08a" intensity={2.4} distance={28} position={[0, 0.4, 0]} />
 
-          {/* Meteorological Anemometer & Warning Light Mast */}
-          <mesh position={[0, 0.9, 0]} material={darkTitaniumMaterial}>
-            <cylinderGeometry args={[0.04, 0.06, 1.2, 8]} />
+          <mesh position={[0, 1.8, 0]} material={darkTitaniumMaterial}>
+            <cylinderGeometry args={[0.08, 0.12, 2.4, 8]} />
           </mesh>
-          <mesh position={[0, 1.55, 0]}>
-            <sphereGeometry args={[0.09, 12, 12]} />
+          <mesh position={[0, 3.1, 0]}>
+            <sphereGeometry args={[0.16, 12, 12]} />
             <meshBasicMaterial color="#ef4444" />
           </mesh>
-          <pointLight position={[0, 1.6, 0]} color="#ef4444" intensity={2.0} distance={20} />
+          <pointLight position={[0, 3.2, 0]} color="#ef4444" intensity={3.0} distance={35} />
         </group>
       </group>
 
       {/* =========================================================================
-          2. RADIAL HABITATION & LABORATORY PODS (L-01, L-02, L-03, L-04)
-          Exact match to reference image: Quilted orange safety exterior,
-          bold black stencil IDs on end caps, rooftop comms dishes, structural
-          skid platforms with leveling footpads, adjacent life-support utility crates
+          2. EXPANDED HABITATION & RESEARCH PODS (L-01, L-02, L-03, L-04)
+          Real Colony Scale: Radius 3.8m, Length 17m
           ========================================================================= */}
 
-      {/* --- POD L-01 (West Research Lab & Astrobiology) --- */}
-      <group position={[-16.0, 0.6, -15.5]} rotation={[0, 0.25, 0]}>
-        {/* Support Foundation Skid Pallet */}
-        <mesh position={[0, -0.3, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
-          <boxGeometry args={[4.2, 0.35, 7.8]} />
+      {/* --- POD L-01 (West Astrobiology & Sample Receiving) --- */}
+      <group position={[-28.0, 1.2, -27.0]} rotation={[0, 0.25, 0]}>
+        <mesh position={[0, -0.6, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
+          <boxGeometry args={[8.5, 0.6, 17.5]} />
         </mesh>
-        {/* Foundation Leveling Jacks */}
-        {[-1.8, 1.8].map((jx) =>
-          [-3.4, 3.4].map((jz) => (
-            <mesh key={`${jx}-${jz}`} position={[jx, -0.6, jz]} material={goldMliMaterial}>
-              <cylinderGeometry args={[0.22, 0.28, 0.35, 12]} />
+        {[-3.6, 3.6].map((jx) =>
+          [-7.5, 7.5].map((jz) => (
+            <mesh key={`${jx}-${jz}`} position={[jx, -1.2, jz]} material={goldMliMaterial}>
+              <cylinderGeometry args={[0.4, 0.5, 0.8, 12]} />
             </mesh>
           ))
         )}
-        {/* Cylindrical Quilted Orange Hab Capsule */}
         <mesh
-          position={[0, 1.45, 0]}
+          position={[0, 3.2, 0]}
           rotation={[Math.PI / 2, 0, 0]}
-          material={
-            useMemo(
-              () =>
-                new THREE.MeshStandardMaterial({
-                  map: podL01Texture,
-                  roughness: 0.55,
-                  metalness: 0.2,
-                }),
-              [podL01Texture]
-            )
-          }
+          material={useMemo(() => new THREE.MeshStandardMaterial({ map: podL01Texture, roughness: 0.55, metalness: 0.2 }), [podL01Texture])}
           castShadow
           receiveShadow
         >
-          <cylinderGeometry args={[1.75, 1.75, 6.8, 32]} />
+          <cylinderGeometry args={[3.8, 3.8, 15.5, 36]} />
         </mesh>
-        {/* Rounded Hemisphere End Caps */}
-        <mesh position={[0, 1.45, 3.4]} rotation={[0, 0, 0]} material={whiteAeroMaterial} castShadow>
-          <sphereGeometry args={[1.74, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
+        <mesh position={[0, 3.2, 7.75]} material={whiteAeroMaterial} castShadow>
+          <sphereGeometry args={[3.78, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.32]} />
         </mesh>
-        <mesh position={[0, 1.45, -3.4]} rotation={[Math.PI, 0, 0]} material={whiteAeroMaterial} castShadow>
-          <sphereGeometry args={[1.74, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
+        <mesh position={[0, 3.2, -7.75]} rotation={[Math.PI, 0, 0]} material={whiteAeroMaterial} castShadow>
+          <sphereGeometry args={[3.78, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.32]} />
         </mesh>
-        {/* Rooftop Communications Antenna Dish */}
-        <group ref={podDish1Ref} position={[0, 3.3, 0]}>
+        <group ref={podDish1Ref} position={[0, 7.3, 0]}>
           <mesh material={darkTitaniumMaterial}>
-            <cylinderGeometry args={[0.06, 0.08, 0.6, 12]} />
+            <cylinderGeometry args={[0.12, 0.16, 1.2, 12]} />
           </mesh>
-          <group position={[0, 0.35, 0]} rotation={[0.55, 0, 0]}>
+          <group position={[0, 0.7, 0]} rotation={[0.55, 0, 0]}>
             <mesh material={meshAntennaMaterial} castShadow>
-              <cylinderGeometry args={[0.7, 0.1, 0.22, 24]} />
+              <cylinderGeometry args={[1.5, 0.2, 0.45, 24]} />
             </mesh>
-            <mesh position={[0, 0.25, 0]} material={darkTitaniumMaterial}>
-              <cylinderGeometry args={[0.02, 0.02, 0.45, 8]} />
+            <mesh position={[0, 0.5, 0]} material={darkTitaniumMaterial}>
+              <cylinderGeometry args={[0.04, 0.04, 0.9, 8]} />
             </mesh>
           </group>
         </group>
-        {/* Adjacent Utility / Cryo Life-Support Module */}
-        <group position={[2.6, 0.3, 0]}>
+        <group position={[5.2, 0.8, 0]}>
           <mesh material={whiteAeroMaterial} castShadow>
-            <boxGeometry args={[1.1, 1.4, 2.2]} />
+            <boxGeometry args={[2.2, 2.8, 4.5]} />
           </mesh>
-          {/* Dual Cryogenic Liquid Gas Tanks */}
-          <mesh position={[0, 0.2, 1.4]} material={whiteAeroMaterial}>
-            <cylinderGeometry args={[0.3, 0.3, 1.2, 16]} />
+          <mesh position={[0, 0.4, 2.8]} material={whiteAeroMaterial}>
+            <cylinderGeometry args={[0.6, 0.6, 2.4, 16]} />
           </mesh>
-          <mesh position={[0, 0.2, 2.1]} material={darkTitaniumMaterial}>
-            <cylinderGeometry args={[0.3, 0.3, 1.2, 16]} />
+          <mesh position={[0, 0.4, 4.2]} material={darkTitaniumMaterial}>
+            <cylinderGeometry args={[0.6, 0.6, 2.4, 16]} />
           </mesh>
         </group>
       </group>
 
-      {/* --- POD L-02 (South-West Crew Quarters & Medical Bay) --- */}
-      <group position={[-11.2, 0.6, -4.5]} rotation={[0, 0.12, 0]}>
-        {/* Support Foundation Skid Pallet */}
-        <mesh position={[0, -0.3, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
-          <boxGeometry args={[4.2, 0.35, 7.8]} />
+      {/* --- POD L-02 (South-West: POWER & MAINTENANCE BAY) --- */}
+      {/* "go to power bay to supercharge battery and clean panels" */}
+      <group position={[-22.0, 1.2, -7.0]} rotation={[0, 0.12, 0]}>
+        <mesh position={[0, -0.6, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
+          <boxGeometry args={[8.5, 0.6, 17.5]} />
         </mesh>
-        {/* Foundation Leveling Jacks */}
-        {[-1.8, 1.8].map((jx) =>
-          [-3.4, 3.4].map((jz) => (
-            <mesh key={`${jx}-${jz}`} position={[jx, -0.6, jz]} material={goldMliMaterial}>
-              <cylinderGeometry args={[0.22, 0.28, 0.35, 12]} />
+        {[-3.6, 3.6].map((jx) =>
+          [-7.5, 7.5].map((jz) => (
+            <mesh key={`${jx}-${jz}`} position={[jx, -1.2, jz]} material={goldMliMaterial}>
+              <cylinderGeometry args={[0.4, 0.5, 0.8, 12]} />
             </mesh>
           ))
         )}
-        {/* Cylindrical Quilted Orange Hab Capsule */}
         <mesh
-          position={[0, 1.45, 0]}
+          position={[0, 3.2, 0]}
           rotation={[Math.PI / 2, 0, 0]}
-          material={
-            useMemo(
-              () =>
-                new THREE.MeshStandardMaterial({
-                  map: podL02Texture,
-                  roughness: 0.55,
-                  metalness: 0.2,
-                }),
-              [podL02Texture]
-            )
-          }
+          material={useMemo(() => new THREE.MeshStandardMaterial({ map: podL02Texture, roughness: 0.55, metalness: 0.2 }), [podL02Texture])}
           castShadow
           receiveShadow
         >
-          <cylinderGeometry args={[1.75, 1.75, 6.8, 32]} />
+          <cylinderGeometry args={[3.8, 3.8, 15.5, 36]} />
         </mesh>
-        {/* End caps */}
-        <mesh position={[0, 1.45, 3.4]} material={whiteAeroMaterial} castShadow>
-          <sphereGeometry args={[1.74, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
+        <mesh position={[0, 3.2, 7.75]} material={whiteAeroMaterial} castShadow>
+          <sphereGeometry args={[3.78, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.32]} />
         </mesh>
-        <mesh position={[0, 1.45, -3.4]} rotation={[Math.PI, 0, 0]} material={whiteAeroMaterial} castShadow>
-          <sphereGeometry args={[1.74, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
+        <mesh position={[0, 3.2, -7.75]} rotation={[Math.PI, 0, 0]} material={whiteAeroMaterial} castShadow>
+          <sphereGeometry args={[3.78, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.32]} />
         </mesh>
-        {/* Rooftop Communications Antenna Dish */}
-        <group ref={podDish2Ref} position={[0, 3.3, 0]}>
+        {/* Room Identification Stencil Beacon */}
+        <mesh position={[0, 6.2, 7.5]}>
+          <boxGeometry args={[3.2, 0.6, 0.2]} />
+          <meshBasicMaterial color="#f59e0b" />
+        </mesh>
+        <group ref={podDish2Ref} position={[0, 7.3, 0]}>
           <mesh material={darkTitaniumMaterial}>
-            <cylinderGeometry args={[0.06, 0.08, 0.6, 12]} />
+            <cylinderGeometry args={[0.12, 0.16, 1.2, 12]} />
           </mesh>
-          <group position={[0, 0.35, 0]} rotation={[0.5, 0.3, 0]}>
+          <group position={[0, 0.7, 0]} rotation={[0.5, 0.3, 0]}>
             <mesh material={meshAntennaMaterial} castShadow>
-              <cylinderGeometry args={[0.7, 0.1, 0.22, 24]} />
+              <cylinderGeometry args={[1.5, 0.2, 0.45, 24]} />
             </mesh>
-            <mesh position={[0, 0.25, 0]} material={darkTitaniumMaterial}>
-              <cylinderGeometry args={[0.02, 0.02, 0.45, 8]} />
+            <mesh position={[0, 0.5, 0]} material={darkTitaniumMaterial}>
+              <cylinderGeometry args={[0.04, 0.04, 0.9, 8]} />
             </mesh>
           </group>
-        </group>
-        {/* Utility boxes and Heat Radiator Panel */}
-        <group position={[2.5, 0.2, -1.2]}>
-          <mesh material={whiteAeroMaterial} castShadow>
-            <boxGeometry args={[0.9, 1.2, 1.8]} />
-          </mesh>
-          <mesh position={[0.55, 0, 0]} material={darkTitaniumMaterial}>
-            <boxGeometry args={[0.1, 0.9, 1.6]} />
-          </mesh>
         </group>
       </group>
 
-      {/* --- POD L-03 (South-East Geology & Core Processing) --- */}
-      <group position={[11.2, 0.6, -4.5]} rotation={[0, -0.12, 0]}>
-        {/* Support Foundation Skid Pallet */}
-        <mesh position={[0, -0.3, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
-          <boxGeometry args={[4.2, 0.35, 7.8]} />
+      {/* --- POD L-03 (South-East: STORE ROOM & GEOLOGICAL CORE VAULT) --- */}
+      {/* "go to store room to put the collected item" */}
+      <group position={[22.0, 1.2, -7.0]} rotation={[0, -0.12, 0]}>
+        <mesh position={[0, -0.6, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
+          <boxGeometry args={[8.5, 0.6, 17.5]} />
         </mesh>
-        {/* Leveling Jacks */}
-        {[-1.8, 1.8].map((jx) =>
-          [-3.4, 3.4].map((jz) => (
-            <mesh key={`${jx}-${jz}`} position={[jx, -0.6, jz]} material={goldMliMaterial}>
-              <cylinderGeometry args={[0.22, 0.28, 0.35, 12]} />
+        {[-3.6, 3.6].map((jx) =>
+          [-7.5, 7.5].map((jz) => (
+            <mesh key={`${jx}-${jz}`} position={[jx, -1.2, jz]} material={goldMliMaterial}>
+              <cylinderGeometry args={[0.4, 0.5, 0.8, 12]} />
             </mesh>
           ))
         )}
-        {/* Cylindrical Quilted Orange Hab Capsule */}
         <mesh
-          position={[0, 1.45, 0]}
+          position={[0, 3.2, 0]}
           rotation={[Math.PI / 2, 0, 0]}
-          material={
-            useMemo(
-              () =>
-                new THREE.MeshStandardMaterial({
-                  map: podL03Texture,
-                  roughness: 0.55,
-                  metalness: 0.2,
-                }),
-              [podL03Texture]
-            )
-          }
+          material={useMemo(() => new THREE.MeshStandardMaterial({ map: podL03Texture, roughness: 0.55, metalness: 0.2 }), [podL03Texture])}
           castShadow
           receiveShadow
         >
-          <cylinderGeometry args={[1.75, 1.75, 6.8, 32]} />
+          <cylinderGeometry args={[3.8, 3.8, 15.5, 36]} />
         </mesh>
-        <mesh position={[0, 1.45, 3.4]} material={whiteAeroMaterial} castShadow>
-          <sphereGeometry args={[1.74, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
+        <mesh position={[0, 3.2, 7.75]} material={whiteAeroMaterial} castShadow>
+          <sphereGeometry args={[3.78, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.32]} />
         </mesh>
-        <mesh position={[0, 1.45, -3.4]} rotation={[Math.PI, 0, 0]} material={whiteAeroMaterial} castShadow>
-          <sphereGeometry args={[1.74, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
+        <mesh position={[0, 3.2, -7.75]} rotation={[Math.PI, 0, 0]} material={whiteAeroMaterial} castShadow>
+          <sphereGeometry args={[3.78, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.32]} />
         </mesh>
-        {/* Rooftop Communications Antenna Dish */}
-        <group ref={podDish3Ref} position={[0, 3.3, 0]}>
+        {/* Room Identification Stencil Beacon */}
+        <mesh position={[0, 6.2, 7.5]}>
+          <boxGeometry args={[3.2, 0.6, 0.2]} />
+          <meshBasicMaterial color="#10b981" />
+        </mesh>
+        <group ref={podDish3Ref} position={[0, 7.3, 0]}>
           <mesh material={darkTitaniumMaterial}>
-            <cylinderGeometry args={[0.06, 0.08, 0.6, 12]} />
+            <cylinderGeometry args={[0.12, 0.16, 1.2, 12]} />
           </mesh>
-          <group position={[0, 0.35, 0]} rotation={[0.48, -0.4, 0]}>
+          <group position={[0, 0.7, 0]} rotation={[0.48, -0.4, 0]}>
             <mesh material={meshAntennaMaterial} castShadow>
-              <cylinderGeometry args={[0.7, 0.1, 0.22, 24]} />
+              <cylinderGeometry args={[1.5, 0.2, 0.45, 24]} />
             </mesh>
-            <mesh position={[0, 0.25, 0]} material={darkTitaniumMaterial}>
-              <cylinderGeometry args={[0.02, 0.02, 0.45, 8]} />
+            <mesh position={[0, 0.5, 0]} material={darkTitaniumMaterial}>
+              <cylinderGeometry args={[0.04, 0.04, 0.9, 8]} />
             </mesh>
           </group>
-        </group>
-        {/* Equipment Crates */}
-        <group position={[-2.5, 0.2, -1.0]}>
-          <mesh material={whiteAeroMaterial} castShadow>
-            <boxGeometry args={[0.9, 1.2, 1.8]} />
-          </mesh>
         </group>
       </group>
 
-      {/* --- POD L-04 (East Command & Telecom Array) --- */}
-      <group position={[16.2, 0.6, -14.8]} rotation={[0, -0.22, 0]}>
-        {/* Support Foundation Skid Pallet */}
-        <mesh position={[0, -0.3, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
-          <boxGeometry args={[4.2, 0.35, 7.8]} />
+      {/* --- POD L-04 (East: SERVER ROOM & DSN TELEMETRY UPLINK WING) --- */}
+      {/* "go to the server room to upload the data" */}
+      <group position={[28.0, 1.2, -27.0]} rotation={[0, -0.22, 0]}>
+        <mesh position={[0, -0.6, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
+          <boxGeometry args={[8.5, 0.6, 17.5]} />
         </mesh>
-        {/* Leveling Jacks */}
-        {[-1.8, 1.8].map((jx) =>
-          [-3.4, 3.4].map((jz) => (
-            <mesh key={`${jx}-${jz}`} position={[jx, -0.6, jz]} material={goldMliMaterial}>
-              <cylinderGeometry args={[0.22, 0.28, 0.35, 12]} />
+        {[-3.6, 3.6].map((jx) =>
+          [-7.5, 7.5].map((jz) => (
+            <mesh key={`${jx}-${jz}`} position={[jx, -1.2, jz]} material={goldMliMaterial}>
+              <cylinderGeometry args={[0.4, 0.5, 0.8, 12]} />
             </mesh>
           ))
         )}
-        {/* Cylindrical Quilted Orange Hab Capsule */}
         <mesh
-          position={[0, 1.45, 0]}
+          position={[0, 3.2, 0]}
           rotation={[Math.PI / 2, 0, 0]}
-          material={
-            useMemo(
-              () =>
-                new THREE.MeshStandardMaterial({
-                  map: podL04Texture,
-                  roughness: 0.55,
-                  metalness: 0.2,
-                }),
-              [podL04Texture]
-            )
-          }
+          material={useMemo(() => new THREE.MeshStandardMaterial({ map: podL04Texture, roughness: 0.55, metalness: 0.2 }), [podL04Texture])}
           castShadow
           receiveShadow
         >
-          <cylinderGeometry args={[1.75, 1.75, 6.8, 32]} />
+          <cylinderGeometry args={[3.8, 3.8, 15.5, 36]} />
         </mesh>
-        <mesh position={[0, 1.45, 3.4]} material={whiteAeroMaterial} castShadow>
-          <sphereGeometry args={[1.74, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
+        <mesh position={[0, 3.2, 7.75]} material={whiteAeroMaterial} castShadow>
+          <sphereGeometry args={[3.78, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.32]} />
         </mesh>
-        <mesh position={[0, 1.45, -3.4]} rotation={[Math.PI, 0, 0]} material={whiteAeroMaterial} castShadow>
-          <sphereGeometry args={[1.74, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.3]} />
+        <mesh position={[0, 3.2, -7.75]} rotation={[Math.PI, 0, 0]} material={whiteAeroMaterial} castShadow>
+          <sphereGeometry args={[3.78, 32, 20, 0, Math.PI * 2, 0, Math.PI * 0.32]} />
         </mesh>
-        {/* Rooftop Communications Antenna Dish */}
-        <group ref={podDish4Ref} position={[0, 3.3, 0]}>
+        {/* Server Room Status Blue Glow */}
+        <mesh position={[0, 6.2, 7.5]}>
+          <boxGeometry args={[3.2, 0.6, 0.2]} />
+          <meshBasicMaterial color="#38bdf8" />
+        </mesh>
+        <group ref={podDish4Ref} position={[0, 7.3, 0]}>
           <mesh material={darkTitaniumMaterial}>
-            <cylinderGeometry args={[0.06, 0.08, 0.6, 12]} />
+            <cylinderGeometry args={[0.12, 0.16, 1.2, 12]} />
           </mesh>
-          <group position={[0, 0.35, 0]} rotation={[0.52, -0.2, 0]}>
+          <group position={[0, 0.7, 0]} rotation={[0.52, -0.2, 0]}>
             <mesh material={meshAntennaMaterial} castShadow>
-              <cylinderGeometry args={[0.7, 0.1, 0.22, 24]} />
+              <cylinderGeometry args={[1.5, 0.2, 0.45, 24]} />
             </mesh>
-            <mesh position={[0, 0.25, 0]} material={darkTitaniumMaterial}>
-              <cylinderGeometry args={[0.02, 0.02, 0.45, 8]} />
+            <mesh position={[0, 0.5, 0]} material={darkTitaniumMaterial}>
+              <cylinderGeometry args={[0.04, 0.04, 0.9, 8]} />
             </mesh>
           </group>
-        </group>
-        {/* Auxiliary Cryo Chillers */}
-        <group position={[-2.5, 0.3, 0.5]}>
-          <mesh material={whiteAeroMaterial} castShadow>
-            <boxGeometry args={[1.0, 1.3, 2.0]} />
-          </mesh>
         </group>
       </group>
 
       {/* =========================================================================
           3. SECONDARY HABITAT DOME ("X-1")
-          Matches reference image: Situated to the right (foreground/midground),
-          inflatable white fabric dome, radial tension straps, bold "X-1" stencil
+          Radius: 13.5m, Height: 7.5m
           ========================================================================= */}
-      <group position={[21.8, 0, -4.5]}>
-        {/* Main Pressurized Fabric Dome Canopy */}
-        <mesh
-          position={[0, 0, 0]}
-          scale={[6.8, 3.4, 6.8]}
-          material={domeX1Material}
-          castShadow
-          receiveShadow
-        >
-          <sphereGeometry args={[1, 36, 20, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
+      <group position={[38.0, 0, 7.0]}>
+        <mesh position={[0, 0, 0]} scale={[13.5, 7.5, 13.5]} material={domeX1Material} castShadow receiveShadow>
+          <sphereGeometry args={[1, 48, 28, 0, Math.PI * 2, 0, Math.PI * 0.5]} />
         </mesh>
-        {/* Perimeter Foundation Collar */}
-        <mesh position={[0, 0.35, 0]} material={whiteAeroMaterial} castShadow receiveShadow>
-          <torusGeometry args={[6.8, 0.45, 16, 48]} />
+        <mesh position={[0, 0.6, 0]} material={whiteAeroMaterial} castShadow receiveShadow>
+          <torusGeometry args={[13.5, 0.8, 16, 60]} />
         </mesh>
-        {/* Central Observation Skylight on Dome Peak */}
-        <mesh position={[0, 3.42, 0]} material={darkTitaniumMaterial}>
-          <cylinderGeometry args={[1.1, 1.25, 0.18, 20]} />
-        </mesh>
-        <mesh position={[0, 3.52, 0]}>
-          <sphereGeometry args={[1.0, 20, 10, 0, Math.PI * 2, 0, Math.PI * 0.4]} />
-          <meshStandardMaterial color="#0f172a" roughness={0.1} metalness={0.9} />
+        <mesh position={[0, 7.5, 0]} material={darkTitaniumMaterial}>
+          <cylinderGeometry args={[2.2, 2.5, 0.35, 24]} />
         </mesh>
       </group>
 
       {/* =========================================================================
-          4. PRESSURIZED TRANSIT CORRIDOR NETWORK
-          Matches reference image: White fabric tubes with ribbed accordion rings,
-          dark expansion joint collars, connecting Hub 08 to pods, secondary domes,
-          and outposts
+          4. EXPANDED PRESSURIZED TRANSIT CORRIDOR NETWORK
+          Radius: 2.1m (Diameter 4.2m)
           ========================================================================= */}
-      <group position={[0, 1.2, 0]}>
-        {/* Transit Corridor: Hub 08 to Pod L-01 (West) */}
-        <mesh
-          position={[-8.5, 0, -15.2]}
-          rotation={[0, 0, Math.PI / 2]}
-          material={corridorMaterial}
-          castShadow
-        >
-          <cylinderGeometry args={[0.95, 0.95, 6.2, 20]} />
+      <group position={[0, 2.4, 0]}>
+        <mesh position={[-16.0, 0, -29.0]} rotation={[0, 0, Math.PI / 2]} material={corridorMaterial} castShadow>
+          <cylinderGeometry args={[2.1, 2.1, 14.0, 24]} />
         </mesh>
-
-        {/* Transit Corridor: Hub 08 to Pod L-02 (South-West) */}
-        <mesh
-          position={[-6.2, 0, -7.8]}
-          rotation={[0, 0.8, Math.PI / 2]}
-          material={corridorMaterial}
-          castShadow
-        >
-          <cylinderGeometry args={[0.95, 0.95, 5.5, 20]} />
+        <mesh position={[-12.0, 0, -16.0]} rotation={[0, 0.85, Math.PI / 2]} material={corridorMaterial} castShadow>
+          <cylinderGeometry args={[2.1, 2.1, 13.0, 24]} />
         </mesh>
-
-        {/* Transit Corridor: Hub 08 to Pod L-03 (South-East) */}
-        <mesh
-          position={[6.2, 0, -7.8]}
-          rotation={[0, -0.8, Math.PI / 2]}
-          material={corridorMaterial}
-          castShadow
-        >
-          <cylinderGeometry args={[0.95, 0.95, 5.5, 20]} />
+        <mesh position={[12.0, 0, -16.0]} rotation={[0, -0.85, Math.PI / 2]} material={corridorMaterial} castShadow>
+          <cylinderGeometry args={[2.1, 2.1, 13.0, 24]} />
         </mesh>
-
-        {/* Transit Corridor: Hub 08 to Pod L-04 (East) */}
-        <mesh
-          position={[8.8, 0, -14.8]}
-          rotation={[0, 0, Math.PI / 2]}
-          material={corridorMaterial}
-          castShadow
-        >
-          <cylinderGeometry args={[0.95, 0.95, 6.5, 20]} />
+        <mesh position={[16.0, 0, -29.0]} rotation={[0, 0, Math.PI / 2]} material={corridorMaterial} castShadow>
+          <cylinderGeometry args={[2.1, 2.1, 14.0, 24]} />
         </mesh>
-
-        {/* Major East Trunk Corridor: Hub 08 to Dome X-1 */}
-        <group position={[12.5, 0, -11.0]}>
-          {/* Main corridor section running East */}
-          <mesh
-            position={[4.0, 0, 0]}
-            rotation={[0, 0, Math.PI / 2]}
-            material={corridorMaterial}
-            castShadow
-          >
-            <cylinderGeometry args={[1.05, 1.05, 7.8, 20]} />
-          </mesh>
-          {/* T-Junction Airlock Hub Node */}
-          <mesh position={[8.2, 0, 0]} material={whiteAeroMaterial} castShadow>
-            <boxGeometry args={[2.4, 2.3, 2.4]} />
-          </mesh>
-          {/* Airlock Hatch Frame */}
-          <mesh position={[8.2, 0, 1.25]} material={darkTitaniumMaterial}>
-            <boxGeometry args={[1.4, 1.9, 0.2]} />
-          </mesh>
-          {/* Branch Corridor continuing South to Dome X-1 */}
-          <mesh
-            position={[8.2, 0, 3.5]}
-            rotation={[Math.PI / 2, 0, 0]}
-            material={corridorMaterial}
-            castShadow
-          >
-            <cylinderGeometry args={[0.95, 0.95, 4.6, 20]} />
-          </mesh>
-          {/* Branch Corridor continuing further East */}
-          <mesh
-            position={[12.4, 0, 0]}
-            rotation={[0, 0, Math.PI / 2]}
-            material={corridorMaterial}
-            castShadow
-          >
-            <cylinderGeometry args={[0.95, 0.95, 6.0, 20]} />
-          </mesh>
-        </group>
-
-        {/* Mountain / Escarpment Transit Corridor running North-West towards Cliff */}
-        <group position={[-11.5, 0, -21.0]} rotation={[0, -0.45, 0]}>
-          <mesh rotation={[0, 0, Math.PI / 2]} material={corridorMaterial} castShadow>
-            <cylinderGeometry args={[1.0, 1.0, 9.5, 20]} />
-          </mesh>
-          {/* Cliffside Sealed Airlock Bulkhead Portal */}
-          <mesh position={[-5.0, 0.1, 0]} material={darkTitaniumMaterial}>
-            <boxGeometry args={[0.6, 2.6, 2.6]} />
-          </mesh>
-        </group>
-
-        {/* Expansion Joint Reinforcement Rings at key portals */}
-        {[-8.5, 8.8].map((px, idx) => (
-          <mesh key={idx} position={[px, 0, -15.0]} material={darkTitaniumMaterial}>
-            <torusGeometry args={[1.05, 0.08, 12, 24]} />
-          </mesh>
-        ))}
       </group>
 
       {/* =========================================================================
-          5. ELEVATED DEEP SPACE NETWORK (DSN) GIANT PARABOLIC TRACKING DISH
-          Matches reference image: Elevated on the rocky ridge to the right/north-east,
-          massive 9.5m parabolic dish pointing skyward, 4-leg subreflector feedhorn,
-          sturdy heavy-duty steel truss tower
+          5. ELEVATED DEEP SPACE NETWORK (DSN) GIANT DISH (16.0m Reflector)
           ========================================================================= */}
-      <group position={[27.5, 3.6, -26.5]}>
-        {/* Quad Steel Truss Tower Base */}
+      <group position={[44.0, 4.5, -35.0]}>
+        {/* Quad Steel Truss Tower */}
         <group position={[0, 0, 0]}>
-          {/* 4 Corner Structural Legs */}
-          {[
-            [-1.8, -1.8],
-            [1.8, -1.8],
-            [-1.8, 1.8],
-            [1.8, 1.8],
-          ].map(([lx, lz], idx) => (
-            <mesh key={idx} position={[lx, 1.8, lz]} material={darkTitaniumMaterial} castShadow>
-              <cylinderGeometry args={[0.12, 0.16, 4.2, 12]} />
+          {[[-3.2, -3.2], [3.2, -3.2], [-3.2, 3.2], [3.2, 3.2]].map(([lx, lz], idx) => (
+            <mesh key={idx} position={[lx, 3.5, lz]} material={darkTitaniumMaterial} castShadow>
+              <cylinderGeometry args={[0.22, 0.32, 8.0, 12]} />
             </mesh>
           ))}
-          {/* Horizontal and Diagonal Cross-Bracing Girders */}
-          {[0.8, 2.2, 3.6].map((by, idx) => (
-            <group key={idx} position={[0, by, 0]}>
-              <mesh position={[0, 0, -1.8]} rotation={[0, 0, Math.PI / 2]} material={darkTitaniumMaterial}>
-                <cylinderGeometry args={[0.06, 0.06, 3.6, 8]} />
-              </mesh>
-              <mesh position={[0, 0, 1.8]} rotation={[0, 0, Math.PI / 2]} material={darkTitaniumMaterial}>
-                <cylinderGeometry args={[0.06, 0.06, 3.6, 8]} />
-              </mesh>
-              <mesh position={[-1.8, 0, 0]} rotation={[Math.PI / 2, 0, 0]} material={darkTitaniumMaterial}>
-                <cylinderGeometry args={[0.06, 0.06, 3.6, 8]} />
-              </mesh>
-              <mesh position={[1.8, 0, 0]} rotation={[Math.PI / 2, 0, 0]} material={darkTitaniumMaterial}>
-                <cylinderGeometry args={[0.06, 0.06, 3.6, 8]} />
-              </mesh>
-            </group>
-          ))}
-          {/* Maintenance Platform Ring Deck */}
-          <mesh position={[0, 3.85, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
-            <cylinderGeometry args={[2.4, 2.4, 0.22, 24]} />
-          </mesh>
-          {/* Platform Safety Railing */}
-          <mesh position={[0, 4.35, 0]} material={whiteAeroMaterial}>
-            <torusGeometry args={[2.35, 0.04, 8, 24]} />
+          <mesh position={[0, 7.6, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
+            <cylinderGeometry args={[4.5, 4.5, 0.4, 32]} />
           </mesh>
         </group>
 
-        {/* Steerable Azimuth Turret & Elevation Cradle */}
-        <group ref={dsnDishRef} position={[0, 4.4, 0]}>
-          {/* Heavy Azimuth Bearing Motor Housing */}
-          <mesh position={[0, 0.45, 0]} material={darkTitaniumMaterial}>
-            <cylinderGeometry args={[1.2, 1.4, 0.9, 20]} />
+        {/* Azimuth Turret & Elevation Cradle */}
+        <group ref={dsnDishRef} position={[0, 8.5, 0]}>
+          <mesh position={[0, 0.8, 0]} material={darkTitaniumMaterial}>
+            <cylinderGeometry args={[2.2, 2.6, 1.6, 24]} />
           </mesh>
 
-          {/* Dual Elevation Yoke Arms */}
-          <mesh position={[-1.3, 1.4, 0]} material={darkTitaniumMaterial} castShadow>
-            <boxGeometry args={[0.35, 1.6, 0.8]} />
-          </mesh>
-          <mesh position={[1.3, 1.4, 0]} material={darkTitaniumMaterial} castShadow>
-            <boxGeometry args={[0.35, 1.6, 0.8]} />
-          </mesh>
-
-          {/* Massive Parabolic Dish Reflector (Diameter 9.2m, Depth 1.8m) */}
-          <group position={[0, 2.2, 0]} rotation={[0.42, 0, 0]}>
-            {/* White Parabolic Dish Shell */}
+          {/* Massive 16m Parabolic Reflector */}
+          <group position={[0, 3.8, 0]} rotation={[0.42, 0, 0]}>
             <mesh rotation={[-Math.PI / 2, 0, 0]} material={dsnDishMaterial} castShadow receiveShadow>
-              {/* Flattened open cone/curved cylinder simulating paraboloid */}
-              <cylinderGeometry args={[4.6, 0.9, 1.6, 36, 1, true]} />
+              <cylinderGeometry args={[8.0, 1.8, 2.8, 48, 1, true]} />
             </mesh>
-            {/* Central Primary Feed Hub */}
-            <mesh position={[0, 0, -0.8]} material={darkTitaniumMaterial}>
-              <cylinderGeometry args={[0.92, 0.92, 0.35, 24]} />
+            <mesh position={[0, 0, -1.4]} material={darkTitaniumMaterial}>
+              <cylinderGeometry args={[1.8, 1.8, 0.6, 32]} />
             </mesh>
-            {/* Rear Ribbed Structural Support Trusses (Backing Skeleton) */}
-            {Array.from({ length: 8 }).map((_, i) => {
-              const a = (i / 8) * Math.PI * 2;
+            {/* Sub-Reflector Feedhorn Assembly */}
+            {[Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4].map((fa, idx) => {
+              const fx = Math.sin(fa) * 6.2;
+              const fy = Math.cos(fa) * 6.2;
               return (
-                <mesh
-                  key={i}
-                  position={[Math.sin(a) * 2.3, Math.cos(a) * 2.3, -0.6]}
-                  rotation={[0, 0, a]}
-                  material={darkTitaniumMaterial}
-                >
-                  <boxGeometry args={[0.08, 4.5, 0.25]} />
+                <mesh key={idx} position={[fx * 0.5, fy * 0.5, 2.0]} rotation={[-fy * 0.08, fx * 0.08, fa]} material={darkTitaniumMaterial}>
+                  <cylinderGeometry args={[0.08, 0.08, 6.5, 8]} />
                 </mesh>
               );
             })}
-            {/* Sub-Reflector Feedhorn Quadripod Struts */}
-            {[Math.PI / 4, (3 * Math.PI) / 4, (5 * Math.PI) / 4, (7 * Math.PI) / 4].map(
-              (fa, idx) => {
-                const fx = Math.sin(fa) * 3.6;
-                const fy = Math.cos(fa) * 3.6;
-                return (
-                  <mesh
-                    key={idx}
-                    position={[fx * 0.5, fy * 0.5, 1.1]}
-                    rotation={[-fy * 0.12, fx * 0.12, fa]}
-                    material={darkTitaniumMaterial}
-                  >
-                    <cylinderGeometry args={[0.04, 0.04, 3.8, 8]} />
-                  </mesh>
-                );
-              }
-            )}
-            {/* Sub-Reflector Secondary Convex Mirror at Focal Point */}
-            <mesh position={[0, 0, 2.7]} material={whiteAeroMaterial}>
-              <cylinderGeometry args={[0.65, 0.2, 0.35, 16]} />
+            <mesh position={[0, 0, 4.8]} material={whiteAeroMaterial}>
+              <cylinderGeometry args={[1.2, 0.4, 0.6, 20]} />
             </mesh>
-            {/* DSN Aircraft Obstruction Warning Strobe at Tip */}
-            <mesh position={[0, 0, 3.0]}>
-              <sphereGeometry args={[0.08, 12, 12]} />
+            <mesh position={[0, 0, 5.2]}>
+              <sphereGeometry args={[0.15, 12, 12]} />
               <meshBasicMaterial color="#ffffff" />
             </mesh>
-            <pointLight
-              ref={dsnStrobeRef}
-              position={[0, 0, 3.1]}
-              color="#ffffff"
-              intensity={3.0}
-              distance={40}
-            />
+            <pointLight ref={dsnStrobeRef} position={[0, 0, 5.3]} color="#ffffff" intensity={4.0} distance={60} />
           </group>
         </group>
       </group>
 
       {/* =========================================================================
-          6. EXTENSIVE PHOTOVOLTAIC SOLAR FARM
-          Matches reference image: Located in the foreground/left flat plains,
-          multiple parallel rows of angled solar arrays, silver framing,
-          deep blue monocrystalline cell matrix
+          6. EXPANSIVE PHOTOVOLTAIC SOLAR ARRAY FIELD
           ========================================================================= */}
-      <group position={[-17.0, 0, 9.5]}>
-        {/* 4 Parallel Rows of Solar Panels facing Mars Equator/Sun */}
-        {[-6.5, -2.5, 1.5, 5.5].map((rowZ, rowIdx) => (
+      <group position={[-28.0, 0, 18.0]}>
+        {[-14.0, -7.0, 0.0, 7.0, 14.0].map((rowZ, rowIdx) => (
           <group key={rowIdx} position={[0, 0, rowZ]}>
-            {/* Rack of 10 Dual-Panel Modules along row */}
-            {Array.from({ length: 9 }).map((_, colIdx) => {
-              const panelX = (colIdx - 4) * 1.55;
+            {Array.from({ length: 12 }).map((_, colIdx) => {
+              const panelX = (colIdx - 5.5) * 2.2;
               return (
                 <group key={colIdx} position={[panelX, 0, 0]}>
-                  {/* Foundation Mounting Post */}
-                  <mesh position={[0, 0.55, 0]} material={darkTitaniumMaterial}>
-                    <cylinderGeometry args={[0.04, 0.04, 1.1, 8]} />
+                  <mesh position={[0, 0.8, 0]} material={darkTitaniumMaterial}>
+                    <cylinderGeometry args={[0.06, 0.06, 1.6, 8]} />
                   </mesh>
-                  {/* Diagonal Sun-Tracking Frame (Tilted ~35° towards sun) */}
-                  <group position={[0, 1.1, 0]} rotation={[0.58, 0, 0]}>
-                    {/* Solar PV Collector Plate */}
+                  <group position={[0, 1.6, 0]} rotation={[0.58, 0, 0]}>
                     <mesh material={solarPanelMaterial} castShadow receiveShadow>
-                      <boxGeometry args={[1.42, 0.04, 0.95]} />
-                    </mesh>
-                    {/* Aluminum Mounting Bezel Edge */}
-                    <mesh position={[0, 0.022, 0]} material={darkTitaniumMaterial}>
-                      <boxGeometry args={[1.45, 0.01, 0.98]} />
+                      <boxGeometry args={[2.0, 0.05, 1.35]} />
                     </mesh>
                   </group>
                 </group>
               );
             })}
-            {/* Inter-Array Electrical Cable Conduit Tray along the row */}
-            <mesh position={[0, 0.06, 0.6]} material={darkTitaniumMaterial}>
-              <boxGeometry args={[14.2, 0.08, 0.12]} />
-            </mesh>
           </group>
         ))}
-
-        {/* Central Solar Power Inverter & Battery Storage Skid */}
-        <group position={[8.2, 0.6, 0]}>
-          <mesh material={whiteAeroMaterial} castShadow>
-            <boxGeometry args={[1.8, 1.3, 3.2]} />
-          </mesh>
-          <mesh position={[0, 0.7, 0]} material={darkTitaniumMaterial}>
-            <boxGeometry args={[1.6, 0.1, 3.0]} />
-          </mesh>
-          {/* Inverter Status Display Glow */}
-          <pointLight color="#10b981" intensity={1.2} distance={6} position={[0.95, 0.2, 0]} />
-        </group>
       </group>
 
       {/* =========================================================================
-          7. MODULAR CARGO & SUPPLY CONTAINERS
-          Matches reference image: Stacks of orange and white cargo modules
-          placed near the corridors and habitat modules
-          ========================================================================= */}
-      <group position={[0, 0, 0]}>
-        {/* Stack 1: Between Hub 08 and North ridge */}
-        <group position={[3.2, 0.7, -19.5]} rotation={[0, 0.05, 0]}>
-          <mesh position={[0, 0, 0]} material={cargoOrangeMaterial} castShadow>
-            <boxGeometry args={[1.4, 1.4, 3.0]} />
-          </mesh>
-          <mesh position={[0, 1.42, 0]} material={cargoOrangeMaterial} castShadow>
-            <boxGeometry args={[1.4, 1.4, 3.0]} />
-          </mesh>
-          <mesh position={[0, 2.84, 0]} material={cargoWhiteMaterial} castShadow>
-            <boxGeometry args={[1.4, 1.4, 3.0]} />
-          </mesh>
-        </group>
-
-        {/* Stack 2: Near Corridor East */}
-        <group position={[14.2, 0.7, -17.5]} rotation={[0, 0.35, 0]}>
-          <mesh position={[0, 0, 0]} material={cargoWhiteMaterial} castShadow>
-            <boxGeometry args={[1.4, 1.4, 3.0]} />
-          </mesh>
-          <mesh position={[0, 1.42, 0]} material={cargoOrangeMaterial} castShadow>
-            <boxGeometry args={[1.4, 1.4, 3.0]} />
-          </mesh>
-        </group>
-
-        {/* Stack 3: Near West Hab */}
-        <group position={[-8.5, 0.7, -18.5]} rotation={[0, -0.2, 0]}>
-          <mesh position={[0, 0, 0]} material={cargoOrangeMaterial} castShadow>
-            <boxGeometry args={[1.4, 1.4, 3.0]} />
-          </mesh>
-          <mesh position={[0, 1.42, 0]} material={cargoWhiteMaterial} castShadow>
-            <boxGeometry args={[1.4, 1.4, 3.0]} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* =========================================================================
-          8. MARS ASCENT VEHICLE (MAV) LAUNCH FACILITY & SAMPLE RETURN GANTRY
-          Positioned on the rear pad behind Hub 08: Vertical 2-stage rocket,
-          service umbilical gantry, cryogenic propellant transfer lines
-          ========================================================================= */}
-      <group position={[0, 0, -28.5]}>
-        {/* Launch Pad Hexagonal Flame Trench & Stand */}
-        <mesh position={[0, 0.6, 0]} material={darkTitaniumMaterial} castShadow receiveShadow>
-          <cylinderGeometry args={[3.2, 3.6, 1.2, 6]} />
-        </mesh>
-
-        {/* Two-Stage Mars Ascent Vehicle (MAV) Rocket */}
-        <group position={[0, 1.2, 0]}>
-          {/* First Stage Solid Propulsion Core (NASA Aerospace White) */}
-          <mesh position={[0, 1.5, 0]} material={whiteAeroMaterial} castShadow>
-            <cylinderGeometry args={[0.9, 0.9, 3.0, 24]} />
-          </mesh>
-          {/* NASA Red & Blue Livery Rings */}
-          <mesh position={[0, 2.3, 0]}>
-            <cylinderGeometry args={[0.905, 0.905, 0.25, 24]} />
-            <meshStandardMaterial color="#0284c7" roughness={0.3} />
-          </mesh>
-          <mesh position={[0, 2.0, 0]}>
-            <cylinderGeometry args={[0.905, 0.905, 0.08, 24]} />
-            <meshStandardMaterial color="#dc2626" roughness={0.3} />
-          </mesh>
-          {/* Interstage Separation Ring */}
-          <mesh position={[0, 3.05, 0]} material={darkTitaniumMaterial}>
-            <cylinderGeometry args={[0.88, 0.9, 0.15, 24]} />
-          </mesh>
-          {/* Second Stage Upper Core */}
-          <mesh position={[0, 3.85, 0]} material={whiteAeroMaterial} castShadow>
-            <cylinderGeometry args={[0.84, 0.88, 1.5, 24]} />
-          </mesh>
-          {/* Aerodynamic Ogive Nosecone (Mars Sample Return Canister Inside) */}
-          <mesh position={[0, 5.0, 0]} material={whiteAeroMaterial} castShadow>
-            <coneGeometry args={[0.84, 1.1, 24]} />
-          </mesh>
-          {/* MAV Strobe Warning Beacon on Rocket Tip */}
-          <mesh position={[0, 5.62, 0]}>
-            <sphereGeometry args={[0.08, 12, 12]} />
-            <meshBasicMaterial color="#38bdf8" />
-          </mesh>
-          <pointLight
-            ref={mavStrobeRef}
-            position={[0, 5.65, 0]}
-            color="#38bdf8"
-            intensity={3.0}
-            distance={40}
-          />
-        </group>
-
-        {/* Structural Service Tower & Retractable Umbilical Arm */}
-        <group position={[-1.8, 0, 0]}>
-          <mesh position={[0, 3.0, 0]} material={darkTitaniumMaterial} castShadow>
-            <boxGeometry args={[0.4, 6.0, 0.4]} />
-          </mesh>
-          {/* Umbilical Fuel Swing Arm connecting to MAV */}
-          <mesh position={[0.8, 4.8, 0]} material={darkTitaniumMaterial}>
-            <boxGeometry args={[1.5, 0.15, 0.15]} />
-          </mesh>
-        </group>
-      </group>
-
-      {/* =========================================================================
-          9. PRIMARY EVA SURFACE LOGISTICS & ROVER DOCKING BAY
+          7. PRIMARY INDUSTRIAL SURFACE LOGISTICS & ROVER DOCKING BAY
           Connects South Portal of Hub 08 directly to Rover Staging Cradle and Ramps!
-          Preserves exact collision kinematics from `getMotherShipRampSurfaceY`:
-            Cradle: relZ from -2.8 to 1.5, |relX| <= 2.2, deckY = groundY + 1.14
-            Ramp: relZ from 1.5 to 8.2, |relX| <= 1.6
+          Exact collision kinematics via getMotherShipRampSurfaceY:
+            Deck: relZ from -5.5 to 1.8, width 7.2m (|relX| <= 3.6), deckY = groundY + 1.25
+            Ramp: relZ from 1.8 to 9.5, width 4.4m (|relX| <= 2.2)
           ========================================================================= */}
       <group position={[0, 0, 0]}>
-        {/* South Airlock Portal of Hub 08 (Direct entrance from docking bay) */}
-        <group position={[0, 1.4, -2.5]}>
-          {/* Heavy Reinforced Pressure Airlock Portal Arch */}
+        {/* South Airlock Portal of Hub 08 */}
+        <group position={[0, 2.2, -4.5]}>
           <mesh material={darkTitaniumMaterial} castShadow>
-            <boxGeometry args={[3.8, 2.7, 1.2]} />
+            <boxGeometry args={[6.8, 4.4, 2.2]} />
           </mesh>
-          {/* Pressurized Double Hatch Doors with rubber seals */}
-          <mesh position={[0, 0, 0.58]} material={whiteAeroMaterial}>
-            <boxGeometry args={[2.2, 2.1, 0.08]} />
+          <mesh position={[0, 0, 1.12]} material={whiteAeroMaterial}>
+            <boxGeometry args={[4.2, 3.6, 0.15]} />
           </mesh>
-          {/* Center Dividing Pressure Gasket */}
-          <mesh position={[0, 0, 0.63]} material={darkTitaniumMaterial}>
-            <boxGeometry args={[0.06, 2.1, 0.04]} />
+          <mesh position={[0, 0, 1.22]} material={darkTitaniumMaterial}>
+            <boxGeometry args={[0.1, 3.6, 0.08]} />
           </mesh>
-          {/* Airlock Status Indicator Light (Green = Docked/Ready, Cyan = Standby) */}
-          <mesh position={[0, 1.2, 0.62]}>
-            <boxGeometry args={[0.6, 0.12, 0.05]} />
-            <meshBasicMaterial color={isDocked ? '#10b981' : '#0ea5e9'} />
+          {/* Station Entry Signage */}
+          <mesh position={[0, 2.1, 1.2]}>
+            <boxGeometry args={[4.8, 0.5, 0.08]} />
+            <meshBasicMaterial color={isDocked ? '#10b981' : '#0284c7'} />
           </mesh>
-          <pointLight
-            color={isDocked ? '#10b981' : '#0ea5e9'}
-            intensity={2.2}
-            distance={8}
-            position={[0, 1.3, 1.0]}
-          />
+          <pointLight color={isDocked ? '#10b981' : '#0ea5e9'} intensity={3.5} distance={15} position={[0, 2.2, 2.0]} />
         </group>
 
-        {/* Staging Cradle Platform Deck (Exact elevation deckY = groundY + 1.14) */}
-        <group position={[0, 1.14, -0.65]}>
-          {/* Heavy Titanium Grid Platform */}
+        {/* Industrial Staging Platform Deck (y = groundY + 1.25) */}
+        <group position={[0, 1.25, -1.2]}>
           <mesh material={darkTitaniumMaterial} castShadow receiveShadow>
-            <boxGeometry args={[4.2, 0.2, 4.3]} />
+            <boxGeometry args={[7.2, 0.35, 7.5]} />
           </mesh>
-          {/* Safety Yellow/Black Perimeter Curbing */}
-          <mesh position={[-2.05, 0.15, 0]} material={goldMliMaterial}>
-            <boxGeometry args={[0.1, 0.12, 4.3]} />
+          {/* Safety Curbing */}
+          <mesh position={[-3.5, 0.25, 0]} material={goldMliMaterial}>
+            <boxGeometry args={[0.2, 0.25, 7.5]} />
           </mesh>
-          <mesh position={[2.05, 0.15, 0]} material={goldMliMaterial}>
-            <boxGeometry args={[0.1, 0.12, 4.3]} />
+          <mesh position={[3.5, 0.25, 0]} material={goldMliMaterial}>
+            <boxGeometry args={[0.2, 0.25, 7.5]} />
           </mesh>
 
-          {/* Sample Umbilical Robot Receiver & Deposit Port */}
-          <group position={[1.75, 0.25, -0.8]}>
+          {/* Sample Umbilical Receiver Robot Arm & Power Receptacle */}
+          <group position={[2.8, 0.45, -1.2]}>
             <mesh material={darkTitaniumMaterial}>
-              <boxGeometry args={[0.6, 0.5, 0.6]} />
+              <boxGeometry args={[1.0, 0.8, 1.0]} />
             </mesh>
-            {/* Luminous Sample Tube Transfer Port */}
-            <mesh position={[0, 0.3, 0]} material={whiteAeroMaterial}>
-              <cylinderGeometry args={[0.18, 0.18, 0.15, 16]} />
+            <mesh position={[0, 0.5, 0]} material={whiteAeroMaterial}>
+              <cylinderGeometry args={[0.3, 0.3, 0.25, 16]} />
             </mesh>
-            <pointLight
-              color={isDocked ? '#34d399' : '#38bdf8'}
-              intensity={2.0}
-              distance={5}
-              position={[0, 0.5, 0]}
-            />
+            <pointLight color={isDocked ? '#34d399' : '#38bdf8'} intensity={2.5} distance={8} position={[0, 0.8, 0]} />
           </group>
 
-          {/* Platform Support Pylons down to Martian Regolith */}
-          {[-1.8, 1.8].map((px) =>
-            [-1.8, 1.8].map((pz) => (
-              <mesh
-                key={`${px}-${pz}`}
-                position={[px, -0.55, pz]}
-                material={darkTitaniumMaterial}
-                castShadow
-              >
-                <cylinderGeometry args={[0.14, 0.18, 0.95, 12]} />
+          {/* Platform Heavy Pylons */}
+          {[-3.0, 3.0].map((px) =>
+            [-3.0, 3.0].map((pz) => (
+              <mesh key={`${px}-${pz}`} position={[px, -0.7, pz]} material={darkTitaniumMaterial} castShadow>
+                <cylinderGeometry args={[0.25, 0.3, 1.1, 12]} />
               </mesh>
             ))
           )}
         </group>
 
-        {/* Dual Titanium Egress Ramps (Slope down from z = 1.5 to z = 8.2) */}
-        <group position={[0, 0.93, 5.0]} rotation={[0.308, 0, 0]}>
-          {/* Left Ramp Rail (x = -1.15m) */}
-          <group position={[-1.15, 0, 0]}>
+        {/* Dual Titanium Egress Ramps (Slope from z = 1.8 to z = 9.5) */}
+        <group position={[0, 0.98, 5.65]} rotation={[0.25, 0, 0]}>
+          {/* Left Ramp Rail (x = -1.35m) */}
+          <group position={[-1.35, 0, 0]}>
             <mesh material={darkTitaniumMaterial} castShadow receiveShadow>
-              <boxGeometry args={[0.38, 0.04, 5.9]} />
+              <boxGeometry args={[0.55, 0.05, 8.2]} />
             </mesh>
-            <mesh position={[-0.18, 0.04, 0]} material={goldMliMaterial}>
-              <boxGeometry args={[0.02, 0.06, 5.9]} />
+            <mesh position={[-0.26, 0.05, 0]} material={goldMliMaterial}>
+              <boxGeometry args={[0.03, 0.08, 8.2]} />
             </mesh>
-            <mesh position={[0.18, 0.03, 0]} material={darkTitaniumMaterial}>
-              <boxGeometry args={[0.02, 0.04, 5.9]} />
+            <mesh position={[0.26, 0.04, 0]} material={darkTitaniumMaterial}>
+              <boxGeometry args={[0.03, 0.06, 8.2]} />
             </mesh>
-            {/* Grip Cleats */}
-            {[-2.5, -2.0, -1.5, -1.0, -0.5, 0, 0.5, 1.0, 1.5, 2.0, 2.5].map((cz, i) => (
-              <mesh key={i} position={[0, 0.022, cz]} material={whiteAeroMaterial}>
-                <boxGeometry args={[0.34, 0.008, 0.04]} />
+            {[-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5].map((cz, i) => (
+              <mesh key={i} position={[0, 0.03, cz]} material={whiteAeroMaterial}>
+                <boxGeometry args={[0.5, 0.01, 0.06]} />
               </mesh>
             ))}
           </group>
 
-          {/* Right Ramp Rail (x = +1.15m) */}
-          <group position={[1.15, 0, 0]}>
+          {/* Right Ramp Rail (x = +1.35m) */}
+          <group position={[1.35, 0, 0]}>
             <mesh material={darkTitaniumMaterial} castShadow receiveShadow>
-              <boxGeometry args={[0.38, 0.04, 5.9]} />
+              <boxGeometry args={[0.55, 0.05, 8.2]} />
             </mesh>
-            <mesh position={[0.18, 0.04, 0]} material={goldMliMaterial}>
-              <boxGeometry args={[0.02, 0.06, 5.9]} />
+            <mesh position={[0.26, 0.05, 0]} material={goldMliMaterial}>
+              <boxGeometry args={[0.03, 0.08, 8.2]} />
             </mesh>
-            <mesh position={[-0.18, 0.03, 0]} material={darkTitaniumMaterial}>
-              <boxGeometry args={[0.02, 0.04, 5.9]} />
+            <mesh position={[-0.26, 0.04, 0]} material={darkTitaniumMaterial}>
+              <boxGeometry args={[0.03, 0.06, 8.2]} />
             </mesh>
-            {/* Grip Cleats */}
-            {[-2.5, -2.0, -1.5, -1.0, -0.5, 0, 0.5, 1.0, 1.5, 2.0, 2.5].map((cz, i) => (
-              <mesh key={i} position={[0, 0.022, cz]} material={whiteAeroMaterial}>
-                <boxGeometry args={[0.34, 0.008, 0.04]} />
+            {[-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5].map((cz, i) => (
+              <mesh key={i} position={[0, 0.03, cz]} material={whiteAeroMaterial}>
+                <boxGeometry args={[0.5, 0.01, 0.06]} />
               </mesh>
             ))}
           </group>
-
-          {/* Structural Cross-Truss Girders */}
-          {[-2.0, -1.0, 0, 1.0, 2.0].map((tz, i) => (
-            <mesh
-              key={i}
-              position={[0, -0.04, tz]}
-              rotation={[0, 0, Math.PI / 2]}
-              material={darkTitaniumMaterial}
-            >
-              <cylinderGeometry args={[0.02, 0.02, 2.1, 8]} />
-            </mesh>
-          ))}
         </group>
 
-        {/* Ramp Ground Foot Rest Plates on Martian Regolith */}
-        <mesh position={[-1.15, 0.04, 7.85]} material={goldMliMaterial} receiveShadow>
-          <boxGeometry args={[0.5, 0.06, 0.4]} />
+        {/* Ramp Ground Plates */}
+        <mesh position={[-1.35, 0.04, 9.4]} material={goldMliMaterial} receiveShadow>
+          <boxGeometry args={[0.7, 0.08, 0.6]} />
         </mesh>
-        <mesh position={[1.15, 0.04, 7.85]} material={goldMliMaterial} receiveShadow>
-          <boxGeometry args={[0.5, 0.06, 0.4]} />
+        <mesh position={[1.35, 0.04, 9.4]} material={goldMliMaterial} receiveShadow>
+          <boxGeometry args={[0.7, 0.08, 0.6]} />
         </mesh>
 
-        {/* Rover Payload Staging Cradle Clamps on Deck */}
-        <group position={[0, 1.83, 1.4]}>
-          <mesh position={[-1.15, 0.02, 0]} material={darkTitaniumMaterial}>
-            <boxGeometry args={[0.4, 0.03, 1.6]} />
-          </mesh>
-          <mesh position={[1.15, 0.02, 0]} material={darkTitaniumMaterial}>
-            <boxGeometry args={[0.4, 0.03, 1.6]} />
-          </mesh>
-          <mesh position={[-1.15, 0.08, -0.6]} material={goldMliMaterial}>
-            <boxGeometry args={[0.1, 0.12, 0.1]} />
-          </mesh>
-          <mesh position={[1.15, 0.08, -0.6]} material={goldMliMaterial}>
-            <boxGeometry args={[0.1, 0.12, 0.1]} />
-          </mesh>
-        </group>
-
-        {/* Holographic Ground Docking Beacon Rings projected on Martian sand */}
-        <mesh
-          ref={beaconRingRef}
-          position={[0, 0.06, 0]}
-          rotation={[-Math.PI / 2, 0, 0]}
-          receiveShadow
-        >
-          <ringGeometry args={[7.2, 8.4, 64]} />
+        {/* Holographic Ground Docking Beacon Ring on Martian Regolith */}
+        <mesh ref={beaconRingRef} position={[0, 0.06, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+          <ringGeometry args={[10.5, 12.2, 64]} />
           <meshBasicMaterial
             color={isDocked ? '#10b981' : '#38bdf8'}
             transparent
@@ -1161,7 +729,7 @@ export const MotherShipLander: React.FC = () => {
           />
         </mesh>
         <mesh position={[0, 0.07, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[3.8, 4.0, 48]} />
+          <ringGeometry args={[5.5, 5.8, 48]} />
           <meshBasicMaterial
             color={isDocked ? '#34d399' : '#0284c7'}
             transparent
@@ -1170,26 +738,12 @@ export const MotherShipLander: React.FC = () => {
           />
         </mesh>
 
-        {/* Strobe Warning Beacon atop Airlock Portal Gantry */}
-        <mesh position={[0, 3.2, -2.5]}>
-          <sphereGeometry args={[0.09, 12, 12]} />
+        {/* Strobe Warning Beacon atop Airlock Portal */}
+        <mesh position={[0, 4.7, -4.5]}>
+          <sphereGeometry args={[0.14, 12, 12]} />
           <meshBasicMaterial color={isDocked ? '#34d399' : '#38bdf8'} />
         </mesh>
-        <pointLight
-          ref={strobeRef}
-          position={[0, 3.25, -2.5]}
-          color={isDocked ? '#34d399' : '#38bdf8'}
-          intensity={3.0}
-          distance={35}
-        />
-
-        {/* Area Pathway Floodlight illuminating Docking Bay & Ramps */}
-        <pointLight
-          position={[0, 3.5, 1.5]}
-          color={isDocked ? '#34d399' : '#0ea5e9'}
-          intensity={2.8}
-          distance={26}
-        />
+        <pointLight ref={strobeRef} position={[0, 4.8, -4.5]} color={isDocked ? '#34d399' : '#38bdf8'} intensity={4.0} distance={45} />
       </group>
     </group>
   );

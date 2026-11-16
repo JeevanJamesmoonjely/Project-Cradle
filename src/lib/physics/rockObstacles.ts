@@ -98,7 +98,82 @@ function initObstacles() {
     }
   });
 
-  // 2. Deterministic pseudo-random generation of boulders and slabs matching MartianTerrain
+  // 2. MARS BASE HABITAT COMPLEX SOLID BARRIER COLLIDERS (Real physical collision)
+  // Central Hub 08 dome perimeter wall (solid barrier ring, leaving South portal open for rover docking)
+  const DOME_CENTER_X = 0;
+  const DOME_CENTER_Z = -56;
+  const DOME_RADIUS = 25.0;
+  for (let i = 0; i < 20; i++) {
+    const angle = (i / 20) * Math.PI * 2;
+    const bx = DOME_CENTER_X + Math.sin(angle) * DOME_RADIUS;
+    const bz = DOME_CENTER_Z + Math.cos(angle) * DOME_RADIUS;
+    // Leave South airlock corridor opening clear for rover docking access
+    if (bz > -34 && Math.abs(bx) < 5.0) continue;
+    const by = getTerrainHeight(bx, bz);
+    addToGrid({
+      id: `base_hub08_wall_${i}`,
+      x: bx,
+      y: by,
+      z: bz,
+      radius: 4.5,
+      height: 12.0,
+      isSolid: true,
+    });
+  }
+
+  // Radial Habitation Pods & Outposts
+  const POD_COLLIDERS = [
+    { id: 'pod_l01_west', x: -28, z: -52, radius: 5.5, height: 7.5 },
+    { id: 'pod_l02_southwest', x: -22, z: -32, radius: 5.5, height: 7.5 },
+    { id: 'pod_l03_southeast', x: 22, z: -32, radius: 5.5, height: 7.5 },
+    { id: 'pod_l04_east', x: 28, z: -52, radius: 5.5, height: 7.5 },
+    { id: 'dome_x1_east', x: 38, z: -18, radius: 13.5, height: 8.5 },
+    { id: 'dsn_tower_cliff', x: 44, z: -60, radius: 9.5, height: 18.0 },
+  ];
+
+  POD_COLLIDERS.forEach((pod) => {
+    addToGrid({
+      id: pod.id,
+      x: pod.x,
+      y: getTerrainHeight(pod.x, pod.z),
+      z: pod.z,
+      radius: pod.radius,
+      height: pod.height,
+      isSolid: true,
+    });
+  });
+
+  // Docking platform side barrier guard rails
+  [-3.8, 3.8].forEach((gx, idx) => {
+    [-29, -25, -21].forEach((gz, zIdx) => {
+      addToGrid({
+        id: `dock_guardrail_${idx}_${zIdx}`,
+        x: gx,
+        y: getTerrainHeight(gx, gz),
+        z: gz,
+        radius: 1.2,
+        height: 3.5,
+        isSolid: true,
+      });
+    });
+  });
+
+  // Solar farm perimeter colliders (so rover cannot phase through panels)
+  [-40, -32, -24, -16].forEach((sx, idx) => {
+    [-14, 0, 14].forEach((sz, zIdx) => {
+      addToGrid({
+        id: `solar_rack_barrier_${idx}_${zIdx}`,
+        x: sx,
+        y: getTerrainHeight(sx, sz),
+        z: sz,
+        radius: 2.2,
+        height: 2.5,
+        isSolid: true,
+      });
+    });
+  });
+
+  // 3. Deterministic pseudo-random generation of boulders and slabs matching MartianTerrain
   let seed = 42;
   const rnd = () => {
     seed = (seed * 9301 + 49297) % 233280;

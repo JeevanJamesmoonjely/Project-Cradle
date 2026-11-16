@@ -28,6 +28,7 @@ import {
   EyeOff,
   Minimize2,
   Maximize2,
+  DoorOpen,
 } from 'lucide-react';
 import { useMissionStore } from '@/lib/store/useMissionStore';
 import { useFlightTimelineStore } from '@/lib/store/useFlightTimelineStore';
@@ -598,18 +599,18 @@ export const HUDOverlay: React.FC = () => {
               <span className="h-2.5 w-2.5 rounded-full bg-amber-400 animate-ping" />
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-amber-300">
-                  MARS HABITAT BASE // HUB 08 DOCK REACHED
+                  MARS HABITAT BASE // HUB 08 REACHED
                 </span>
                 <span className="text-[10px] text-zinc-300">
-                  Submit core samples, uplink DSN data & recharge rover
+                  Enter Server Room, Store Room & Power Bay
                 </span>
               </div>
               <button
                 onClick={() => openModal('mothership')}
                 className="flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-600 px-3.5 py-1 text-xs font-bold text-white shadow-md hover:scale-105 active:scale-95 cursor-pointer ml-1"
               >
-                <Rocket className="h-3.5 w-3.5" />
-                <span>DOCK [E]</span>
+                <DoorOpen className="h-3.5 w-3.5" />
+                <span>ENTER BASE [E]</span>
               </button>
             </div>
           )}

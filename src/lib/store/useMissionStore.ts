@@ -108,6 +108,24 @@ export interface MissionStore {
     isDocked: boolean;
     lastSubmission: { samples: number; data: number; reward: number } | null;
   };
+  baseHabitat: {
+    activeRoom: 'airlock' | 'server_room' | 'store_room' | 'power_bay' | 'mav';
+    vaultCanisters: Array<{
+      id: string;
+      name: string;
+      mineralogy?: string;
+      sciencePoints: number;
+      slotIndex: number;
+    }>;
+    lastActionLog: string;
+  };
+  setBaseRoom: (room: 'airlock' | 'server_room' | 'store_room' | 'power_bay' | 'mav') => void;
+  depositSampleToVault: (poiId: string) => void;
+  depositAllSamplesToVault: () => void;
+  uploadTelemetryInServerRoom: (poiId: string) => void;
+  uploadAllTelemetryInServerRoom: () => void;
+  superchargeAtPowerBay: () => void;
+  cleanSolarDustAtPowerBay: () => void;
   submitToMotherShip: () => void;
   checkMotherShipProximity: (roverPos: [number, number, number]) => void;
 
@@ -695,6 +713,194 @@ export const useMissionStore = create<MissionStore>((set, get) => ({
     dataTransmitted: 0,
     isDocked: false,
     lastSubmission: null,
+  },
+
+  baseHabitat: {
+    activeRoom: 'airlock',
+    vaultCanisters: [],
+    lastActionLog: 'AIRLOCK READY // DOCKED AT PRIMARY SURFACE PLATFORM',
+  },
+
+  setBaseRoom: (room) => {
+    soundEngine.init();
+    if (room === 'airlock') {
+      soundEngine.playAirlockCycle();
+    } else {
+      soundEngine.playClick();
+    }
+    set((state) => ({
+      baseHabitat: {
+        ...state.baseHabitat,
+        activeRoom: room,
+        lastActionLog: `TRANSFERRED TO ${room.toUpperCase().replace('_', ' ')}`,
+      },
+    }));
+  },
+
+  depositSampleToVault: (poiId) => {
+    const { pois, baseHabitat, motherShip } = get();
+    const targetPOI = pois.find((p) => p.id === poiId && p.sampleCollected);
+    if (!targetPOI) return;
+
+    soundEngine.init();
+    soundEngine.playVaultCanisterLock();
+
+    const sampleReward = 450;
+    const newCanister = {
+      id: targetPOI.id,
+      name: targetPOI.name,
+      mineralogy: targetPOI.composition ? targetPOI.composition.map((c) => c.mineral).join(', ') : 'Silicate Matrix',
+      sciencePoints: sampleReward,
+      slotIndex: baseHabitat.vaultCanisters.length + 1,
+    };
+
+    set((state) => ({
+      sciencePoints: state.sciencePoints + sampleReward,
+      pois: state.pois.map((p) =>
+        p.id === poiId ? { ...p, sampleCollected: false } : p
+      ),
+      motherShip: {
+        ...state.motherShip,
+        samplesDeposited: state.motherShip.samplesDeposited + 1,
+      },
+      baseHabitat: {
+        ...state.baseHabitat,
+        vaultCanisters: [...state.baseHabitat.vaultCanisters, newCanister],
+        lastActionLog: `SAMPLE "${targetPOI.name.toUpperCase()}" SECURED IN VAULT CANISTER #${newCanister.slotIndex}`,
+      },
+    }));
+
+    get().updateObjective('obj-1', 1);
+    get().updateObjective('obj-4', sampleReward);
+  },
+
+  depositAllSamplesToVault: () => {
+    const { pois, baseHabitat, motherShip } = get();
+    const collected = pois.filter((p) => p.sampleCollected);
+    if (collected.length === 0) return;
+
+    soundEngine.init();
+    soundEngine.playVaultCanisterLock();
+
+    const rewardPerSample = 450;
+    const bonus = 250;
+    const totalAward = collected.length * rewardPerSample + bonus;
+
+    let nextSlot = baseHabitat.vaultCanisters.length + 1;
+    const newCanisters = collected.map((p) => ({
+      id: p.id,
+      name: p.name,
+      mineralogy: p.composition ? p.composition.map((c) => c.mineral).join(', ') : 'Silicate Matrix',
+      sciencePoints: rewardPerSample,
+      slotIndex: nextSlot++,
+    }));
+
+    set((state) => ({
+      sciencePoints: state.sciencePoints + totalAward,
+      pois: state.pois.map((p) => ({ ...p, sampleCollected: false })),
+      motherShip: {
+        ...state.motherShip,
+        samplesDeposited: state.motherShip.samplesDeposited + collected.length,
+      },
+      baseHabitat: {
+        ...state.baseHabitat,
+        vaultCanisters: [...state.baseHabitat.vaultCanisters, ...newCanisters],
+        lastActionLog: `ALL ${collected.length} CORE SAMPLES HERMETICALLY LOCKED IN STORE ROOM VAULT (+${totalAward} SP)`,
+      },
+    }));
+
+    get().updateObjective('obj-1', collected.length);
+    get().updateObjective('obj-4', totalAward);
+  },
+
+  uploadTelemetryInServerRoom: (poiId) => {
+    const { pois, motherShip } = get();
+    const target = pois.find((p) => p.id === poiId && p.discovered && !p.downlinked);
+    if (!target) return;
+
+    soundEngine.init();
+    soundEngine.playServerUplinkStream();
+
+    const spAward = target.sciencePoints;
+    set((state) => ({
+      sciencePoints: state.sciencePoints + spAward,
+      pois: state.pois.map((p) => (p.id === poiId ? { ...p, downlinked: true } : p)),
+      rover: {
+        ...state.rover,
+        storageUsedMB: Math.max(200, state.rover.storageUsedMB - 480),
+      },
+      motherShip: {
+        ...state.motherShip,
+        dataTransmitted: state.motherShip.dataTransmitted + 1,
+      },
+      baseHabitat: {
+        ...state.baseHabitat,
+        lastActionLog: `DATASET "${target.name.toUpperCase()}" TRANSMITTED VIA DSN SERVER RACKS (+${spAward} SP)`,
+      },
+    }));
+
+    get().updateObjective('obj-4', spAward);
+  },
+
+  uploadAllTelemetryInServerRoom: () => {
+    const { pois, motherShip } = get();
+    const pending = pois.filter((p) => p.discovered && !p.downlinked);
+    if (pending.length === 0) return;
+
+    soundEngine.init();
+    soundEngine.playServerUplinkStream();
+
+    const totalSP = pending.reduce((sum, p) => sum + p.sciencePoints, 0) + 300;
+    set((state) => ({
+      sciencePoints: state.sciencePoints + totalSP,
+      pois: state.pois.map((p) => ({ ...p, downlinked: true })),
+      rover: {
+        ...state.rover,
+        storageUsedMB: 200, // completely offloaded
+      },
+      motherShip: {
+        ...state.motherShip,
+        dataTransmitted: state.motherShip.dataTransmitted + pending.length,
+      },
+      baseHabitat: {
+        ...state.baseHabitat,
+        lastActionLog: `DSN ORBITAL UPLINK COMPLETE // ${pending.length} DATASETS STREAMED TO EARTH (+${totalSP} SP)`,
+      },
+    }));
+
+    get().updateObjective('obj-4', totalSP);
+  },
+
+  superchargeAtPowerBay: () => {
+    soundEngine.init();
+    soundEngine.playSuperchargeHum();
+    set((state) => ({
+      rover: {
+        ...state.rover,
+        battery: 100,
+        batteryWarning: false,
+        motorTemp: 18.0,
+      },
+      baseHabitat: {
+        ...state.baseHabitat,
+        lastActionLog: '400V HIGH-VOLTAGE UMBILICAL CONNECTED // BATTERY SUPERCHARGED TO 100%',
+      },
+    }));
+  },
+
+  cleanSolarDustAtPowerBay: () => {
+    soundEngine.init();
+    soundEngine.playAirlockCycle();
+    set((state) => ({
+      subsystems: {
+        ...state.subsystems,
+        solarDustCleanProgress: 100,
+      },
+      baseHabitat: {
+        ...state.baseHabitat,
+        lastActionLog: 'PNEUMATIC CO2 PURGE COMPLETE // SOLAR PANELS RESTORED TO 100% CLEANLINESS',
+      },
+    }));
   },
 
   checkMotherShipProximity: (roverPos) => {

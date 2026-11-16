@@ -278,6 +278,148 @@ class PlanetarySoundEngine {
     });
   }
 
+  // =========================================================================
+  // MARS HABITAT BASE ROOM SOUND FX (Airlock, Server Room, Sample Vault, Supercharge)
+  // =========================================================================
+
+  // 1. Pressurized EVA Airlock Decompression & Cycling Hiss
+  public playAirlockCycle() {
+    if (!this.ctx || this.isMuted) return;
+    this.ensureRunning();
+    const now = this.ctx.currentTime;
+
+    // Pneumatic gas equalization noise burst
+    const bufferSize = this.ctx.sampleRate * 0.8;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.35));
+    }
+    const noise = this.ctx.createBufferSource();
+    noise.buffer = buffer;
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.setValueAtTime(650, now);
+    filter.frequency.exponentialRampToValueAtTime(220, now + 0.7);
+    filter.Q.setValueAtTime(1.5, now);
+
+    const gain = this.ctx.createGain();
+    gain.gain.setValueAtTime(0.09, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.75);
+
+    noise.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    noise.start(now);
+
+    // Heavy mechanical steel airlock bolt clamp thud
+    const osc = this.ctx.createOscillator();
+    const oscGain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(95, now + 0.55);
+    osc.frequency.exponentialRampToValueAtTime(35, now + 0.85);
+
+    oscGain.gain.setValueAtTime(0.12, now + 0.55);
+    oscGain.gain.exponentialRampToValueAtTime(0.001, now + 0.88);
+
+    osc.connect(oscGain);
+    oscGain.connect(this.ctx.destination);
+    osc.start(now + 0.55);
+    osc.stop(now + 0.88);
+  }
+
+  // 2. Server Room Deep Space Telemetry Uplink Data Stream
+  public playServerUplinkStream() {
+    if (!this.ctx || this.isMuted) return;
+    this.ensureRunning();
+    const now = this.ctx.currentTime;
+
+    // Fast digital packet chirp burst
+    const freqs = [1046.5, 1318.5, 1567.98, 2093.0, 1760.0, 2349.32];
+    freqs.forEach((f, idx) => {
+      const osc = this.ctx!.createOscillator();
+      const gain = this.ctx!.createGain();
+      osc.type = 'triangle';
+      const t = now + idx * 0.045;
+      osc.frequency.setValueAtTime(f, t);
+
+      gain.gain.setValueAtTime(0.04, t);
+      gain.gain.exponentialRampToValueAtTime(0.001, t + 0.04);
+
+      osc.connect(gain);
+      gain.connect(this.ctx!.destination);
+      osc.start(t);
+      osc.stop(t + 0.045);
+    });
+  }
+
+  // 3. Geological Store Room Sample Canister Hermetic Lock
+  public playVaultCanisterLock() {
+    if (!this.ctx || this.isMuted) return;
+    this.ensureRunning();
+    const now = this.ctx.currentTime;
+
+    // Nitrogen purge hiss followed by dual servo latch clicks
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(1200, now);
+    osc.frequency.setValueAtTime(800, now + 0.06);
+
+    gain.gain.setValueAtTime(0.07, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.14);
+
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.14);
+
+    // Solid vault latch click
+    const osc2 = this.ctx.createOscillator();
+    const gain2 = this.ctx.createGain();
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(520, now + 0.12);
+    osc2.frequency.exponentialRampToValueAtTime(140, now + 0.28);
+
+    gain2.gain.setValueAtTime(0.08, now + 0.12);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+
+    osc2.connect(gain2);
+    gain2.connect(this.ctx.destination);
+    osc2.start(now + 0.12);
+    osc2.stop(now + 0.3);
+  }
+
+  // 4. Power Bay High-Voltage Umbilical Supercharge Hum
+  public playSuperchargeHum() {
+    if (!this.ctx || this.isMuted) return;
+    this.ensureRunning();
+    const now = this.ctx.currentTime;
+
+    // Rising electromagnetic transformer hum (60 Hz to 240 Hz)
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = 'sawtooth';
+    osc.frequency.setValueAtTime(60, now);
+    osc.frequency.exponentialRampToValueAtTime(240, now + 0.6);
+
+    const filter = this.ctx.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(320, now);
+    filter.frequency.exponentialRampToValueAtTime(850, now + 0.6);
+
+    gain.gain.setValueAtTime(0.001, now);
+    gain.gain.linearRampToValueAtTime(0.08, now + 0.3);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.7);
+  }
+
   // Dynamic low-frequency atmospheric swirling vortex sound (whoosh and regolith hiss)
   private vortexGain: GainNode | null = null;
   private vortexFilter: BiquadFilterNode | null = null;
