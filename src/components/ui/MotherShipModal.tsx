@@ -71,14 +71,14 @@ export const MotherShipModal: React.FC = () => {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-xs font-black tracking-widest text-amber-400">
-                  NASA MAV / MOTHER SHIP UPLINK
+                  MARS HABITAT BASE // HUB 08 & MAV FACILITY
                 </span>
                 <span className="rounded-full bg-emerald-950 px-2 py-0.5 text-[10px] text-emerald-400 border border-emerald-500/40 font-bold">
-                  UMBILICAL DOCKED
+                  EVA DOCKING BAY ACTIVE
                 </span>
               </div>
               <h2 className="text-lg font-bold text-white tracking-tight">
-                Sample Retrieval Lander & Orbital Relay
+                Hub 08 Primary Airlock & Mars Ascent Vehicle
               </h2>
             </div>
           </div>
@@ -98,10 +98,10 @@ export const MotherShipModal: React.FC = () => {
               <CheckCircle2 className="h-8 w-8" />
             </div>
             <h3 className="text-xl font-bold text-white">
-              SAMPLES & TELEMETRY SUBMITTED TO MOTHER SHIP!
+              SAMPLES & TELEMETRY SUBMITTED TO MARS HABITAT BASE!
             </h3>
             <p className="mt-2 text-xs text-zinc-300 max-w-md">
-              Core samples are locked in the Mars Ascent Vehicle (MAV) return capsule. Science telemetry beamed to Earth via orbital relay. Rover systems recharged to 100%.
+              Core samples are secured in Hub 08 storage and queued for MAV orbital launch. Scientific telemetry beamed to Earth via the Deep Space Network dish. Rover battery recharged to 100%.
             </p>
 
             <div className="mt-6 flex flex-wrap items-center justify-center gap-4">

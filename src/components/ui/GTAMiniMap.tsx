@@ -298,10 +298,10 @@ export const GTAMiniMap: React.FC = () => {
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // MAV Label
+      // Base Hub 08 Landmark Label
       ctx.fillStyle = '#fbbf24';
       ctx.font = 'bold 8px monospace';
-      ctx.fillText('MAV', mavDrawX + 9, mavDrawY + 3);
+      ctx.fillText('BASE 08', mavDrawX + 9, mavDrawY + 3);
 
       // 5c. Active Convective Martian Dust Devil / Vortex Radar Blip
       if (env.dustDevilActive && env.dustDevilPos) {

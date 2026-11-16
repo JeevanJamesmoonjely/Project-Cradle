@@ -563,16 +563,16 @@ export const HUDOverlay: React.FC = () => {
             </div>
           )}
 
-          {/* 2. Mother Ship Docking Prompt */}
+          {/* 2. Mars Base Habitat Docking Prompt */}
           {deployment.status === 'deployed' && motherShip.isDocked && (
             <div className="flex items-center gap-3 rounded-full border border-amber-400/80 bg-black/90 px-4 py-2 backdrop-blur-md shadow-[0_0_25px_rgba(245,158,11,0.4)] animate-in slide-in-from-bottom-2 duration-200">
               <span className="h-2.5 w-2.5 rounded-full bg-amber-400 animate-ping" />
               <div className="flex flex-col">
                 <span className="text-xs font-bold text-amber-300">
-                  NASA MOTHER SHIP / MAV DOCK REACHED
+                  MARS HABITAT BASE // HUB 08 DOCK REACHED
                 </span>
                 <span className="text-[10px] text-zinc-300">
-                  Submit core samples & scientific data to orbit
+                  Submit core samples, uplink DSN data & recharge rover
                 </span>
               </div>
               <button

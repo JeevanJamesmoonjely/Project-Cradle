@@ -1072,3 +1072,430 @@ export function getHydrazinePlumeTexture(): THREE.CanvasTexture {
 export function getPlumeShockTexture(): THREE.CanvasTexture {
   return getHydrazinePlumeTexture();
 }
+
+/**
+ * 10. Photorealistic Inflatable Habitat Dome Beta-Cloth Texture
+ * - White/silver multi-layer thermal insulation with fabric creases
+ * - Radial tension load-bearing webbing straps and concentric compression rings
+ * - Prominent high-contrast stencil markings ("08", "X-1")
+ * - Observation cupolas and skylight rings
+ */
+export function getHabitatDomeTexture(label: string = '08'): THREE.CanvasTexture {
+  const cacheKey = `habitat_dome_${label}`;
+  if (textureCache[cacheKey]) return textureCache[cacheKey];
+  if (typeof window === 'undefined' || typeof document === 'undefined') return createFallback();
+
+  const size = 1024;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  const cx = size / 2;
+  const cy = size / 2;
+
+  // Base woven Beta-cloth fabric with radial lighting falloff
+  const grad = ctx.createRadialGradient(cx, cy, 50, cx, cy, size * 0.5);
+  grad.addColorStop(0, '#f8fafc');
+  grad.addColorStop(0.55, '#f1f5f9');
+  grad.addColorStop(0.85, '#e2e8f0');
+  grad.addColorStop(1.0, '#cbd5e1');
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, size, size);
+
+  // Micro-creases and wrinkled fabric wrinkles
+  ctx.strokeStyle = 'rgba(148, 163, 184, 0.28)';
+  ctx.lineWidth = 1.2;
+  for (let i = 0; i < 90; i++) {
+    const angle = (i / 90) * Math.PI * 2;
+    const rStart = 80 + (i % 7) * 25;
+    const rEnd = size * 0.48 - (i % 5) * 20;
+    ctx.beginPath();
+    const x1 = cx + Math.cos(angle) * rStart;
+    const y1 = cy + Math.sin(angle) * rStart;
+    const xMid = cx + Math.cos(angle + 0.04) * ((rStart + rEnd) * 0.5);
+    const yMid = cy + Math.sin(angle + 0.04) * ((rStart + rEnd) * 0.5);
+    const x2 = cx + Math.cos(angle) * rEnd;
+    const y2 = cy + Math.sin(angle) * rEnd;
+    ctx.moveTo(x1, y1);
+    ctx.quadraticCurveTo(xMid, yMid, x2, y2);
+    ctx.stroke();
+  }
+
+  // Concentric structural compression rings
+  const rings = [140, 240, 340, 420, 475];
+  rings.forEach((r, idx) => {
+    ctx.strokeStyle = idx === rings.length - 1 ? 'rgba(71, 85, 105, 0.55)' : 'rgba(100, 116, 139, 0.35)';
+    ctx.lineWidth = idx === rings.length - 1 ? 5 : 2.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  // Heavy radial structural load straps (tension ribs)
+  const numRibs = 24;
+  ctx.strokeStyle = 'rgba(51, 65, 85, 0.5)';
+  ctx.lineWidth = 4;
+  for (let i = 0; i < numRibs; i++) {
+    const angle = (i / numRibs) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * 70, cy + Math.sin(angle) * 70);
+    ctx.lineTo(cx + Math.cos(angle) * (size * 0.49), cy + Math.sin(angle) * (size * 0.49));
+    ctx.stroke();
+
+    // Secondary tension line
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle + 0.008) * 70, cy + Math.sin(angle + 0.008) * 70);
+    ctx.lineTo(cx + Math.cos(angle + 0.008) * (size * 0.49), cy + Math.sin(angle + 0.008) * (size * 0.49));
+    ctx.stroke();
+    ctx.strokeStyle = 'rgba(51, 65, 85, 0.5)';
+    ctx.lineWidth = 4;
+  }
+
+  // Skylight / Cupola ports around the central apex
+  const skylightAngles = [Math.PI * 0.25, Math.PI * 0.75, Math.PI * 1.25, Math.PI * 1.75];
+  skylightAngles.forEach((a) => {
+    const sx = cx + Math.cos(a) * 230;
+    const sy = cy + Math.sin(a) * 230;
+
+    // Dark tinted pressure quartz glass
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(sx, sy, 32, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Golden metallic reflections
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 34, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Rivet ring
+    ctx.fillStyle = '#94a3b8';
+    for (let j = 0; j < 12; j++) {
+      const ra = (j / 12) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(sx + Math.cos(ra) * 39, sy + Math.sin(ra) * 39, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  });
+
+  // Massive stenciled label in black (e.g. "08" or "X-1")
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.fillStyle = '#090d16'; // Deep space black stencil
+  ctx.font = '900 190px "Arial Black", Impact, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.letterSpacing = '8px';
+  ctx.fillText(label, 0, 0);
+
+  // Stencil cutouts (horizontal slit across the middle of the stencil characters)
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillRect(-170, -10, 340, 16);
+  ctx.restore();
+
+  // Subtle outer perimeter skirt ring with tie-down anchoring grommets
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 8;
+  ctx.beginPath();
+  ctx.arc(cx, cy, size * 0.485, 0, Math.PI * 2);
+  ctx.stroke();
+
+  // Anchoring tie-down grommets
+  ctx.fillStyle = '#1e293b';
+  for (let i = 0; i < 48; i++) {
+    const angle = (i / 48) * Math.PI * 2;
+    const gx = cx + Math.cos(angle) * (size * 0.485);
+    const gy = cy + Math.sin(angle) * (size * 0.485);
+    ctx.beginPath();
+    ctx.arc(gx, gy, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.ClampToEdgeWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  textureCache[cacheKey] = tex;
+  return tex;
+}
+
+/**
+ * 11. Photorealistic Orange Quilted Habitation Pod Texture
+ * - Vibrant aerospace orange thermal quilted blanket with stitched diamond seams
+ * - High-contrast black stencil identification ("L-01", "L-02", "L-03", "L-04")
+ * - Technical pressure markings and airlock alignment graphics
+ */
+export function getOrangePodTexture(label: string = 'L-02'): THREE.CanvasTexture {
+  const cacheKey = `orange_pod_${label}`;
+  if (textureCache[cacheKey]) return textureCache[cacheKey];
+  if (typeof window === 'undefined' || typeof document === 'undefined') return createFallback();
+
+  const width = 1024;
+  const height = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  // Base rich aerospace thermal orange gradient
+  const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+  bgGrad.addColorStop(0, '#ea580c');
+  bgGrad.addColorStop(0.3, '#f97316');
+  bgGrad.addColorStop(0.7, '#ea580c');
+  bgGrad.addColorStop(1, '#c2410c');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, width, height);
+
+  // Quilted insulation cell grid (diamond / square quilted pillows with specular highlights)
+  const step = 32;
+  for (let y = 0; y < height; y += step) {
+    for (let x = 0; x < width; x += step) {
+      // Soft rounded pillow center highlight
+      const pGrad = ctx.createRadialGradient(x + step * 0.5, y + step * 0.5, 2, x + step * 0.5, y + step * 0.5, step * 0.7);
+      pGrad.addColorStop(0, 'rgba(254, 215, 170, 0.4)');
+      pGrad.addColorStop(0.6, 'rgba(249, 115, 22, 0.1)');
+      pGrad.addColorStop(1, 'rgba(154, 52, 18, 0.5)');
+      ctx.fillStyle = pGrad;
+      ctx.fillRect(x, y, step, step);
+
+      // Thread stitch lines
+      ctx.strokeStyle = 'rgba(124, 45, 18, 0.65)';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(x, y, step, step);
+
+      // Stitched tacking point in center
+      ctx.fillStyle = 'rgba(67, 20, 7, 0.6)';
+      ctx.beginPath();
+      ctx.arc(x + step * 0.5, y + step * 0.5, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  // Heavy reinforcement bands running circumferentially
+  const bands = [60, 240, 420];
+  bands.forEach((by) => {
+    ctx.fillStyle = 'rgba(154, 52, 18, 0.4)';
+    ctx.fillRect(0, by - 6, width, 12);
+    ctx.strokeStyle = '#7c2d12';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, by);
+    ctx.lineTo(width, by);
+    ctx.stroke();
+  });
+
+  // End cap prominent stencil identification (e.g. "L-02")
+  ctx.save();
+  ctx.fillStyle = '#0f172a'; // Bold black stencil
+  ctx.font = '900 135px "Arial Black", Impact, sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Render stencil on both ends of the cylindrical unwrap
+  const positions = [width * 0.25, width * 0.75];
+  positions.forEach((px) => {
+    ctx.fillText(label, px, height * 0.52);
+
+    // Stencil cutouts
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(px - 140, height * 0.52 - 6, 280, 12);
+    ctx.fillStyle = '#0f172a';
+
+    // Technical specification badges under the label
+    ctx.font = 'bold 15px monospace';
+    ctx.fillText('CRADLE // PRESSURIZED HABITAT', px, height * 0.72);
+    ctx.fillText('LIFE SUPPORT 101.3 kPa // CLASS-A', px, height * 0.77);
+    ctx.font = '900 135px "Arial Black", Impact, sans-serif';
+  });
+  ctx.restore();
+
+  // Red & White hazard border stripe on bottom edge
+  const stripeW = 20;
+  for (let x = 0; x < width; x += stripeW * 2) {
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(x, height - 16, stripeW, 16);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(x + stripeW, height - 16, stripeW, 16);
+  }
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.ClampToEdgeWrapping;
+  textureCache[cacheKey] = tex;
+  return tex;
+}
+
+/**
+ * 12. Photorealistic Pressurized Transit Corridor Tube Texture
+ * - Accordion expansion bellows and structural support rings
+ * - High-tensile woven white Kevlar / Vectran fabric
+ */
+export function getTransitCorridorTexture(): THREE.CanvasTexture {
+  if (textureCache['transit_corridor']) return textureCache['transit_corridor'];
+  if (typeof window === 'undefined' || typeof document === 'undefined') return createFallback();
+
+  const width = 512;
+  const height = 256;
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d')!;
+
+  // Base off-white pressurized Kevlar tube
+  ctx.fillStyle = '#f1f5f9';
+  ctx.fillRect(0, 0, width, height);
+
+  // Accordion expansion bellows (repeating vertical ribbed bands)
+  const ribStep = 32;
+  for (let x = 0; x < width; x += ribStep) {
+    const ribGrad = ctx.createLinearGradient(x, 0, x + ribStep, 0);
+    ribGrad.addColorStop(0, '#e2e8f0');
+    ribGrad.addColorStop(0.3, '#f8fafc');
+    ribGrad.addColorStop(0.7, '#cbd5e1');
+    ribGrad.addColorStop(1, '#94a3b8');
+    ctx.fillStyle = ribGrad;
+    ctx.fillRect(x, 0, ribStep - 4, height);
+
+    // Structural clamp band
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(x + ribStep - 4, 0, 4, height);
+  }
+
+  // Longitudinal tension webbing straps
+  ctx.strokeStyle = '#c2410c'; // Aerospace red/orange guide stripes
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(0, height * 0.2);
+  ctx.lineTo(width, height * 0.2);
+  ctx.moveTo(0, height * 0.8);
+  ctx.lineTo(width, height * 0.8);
+  ctx.stroke();
+
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.wrapS = THREE.RepeatWrapping;
+  tex.wrapT = THREE.RepeatWrapping;
+  tex.repeat.set(4, 1);
+  textureCache['transit_corridor'] = tex;
+  return tex;
+}
+
+/**
+ * 13. Deep Space Network (DSN) Parabolic Antenna Dish Surface Texture
+ */
+export function getDSNDishTexture(): THREE.CanvasTexture {
+  if (textureCache['dsn_dish_surface']) return textureCache['dsn_dish_surface'];
+  if (typeof window === 'undefined' || typeof document === 'undefined') return createFallback();
+
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  const cx = size / 2;
+  const cy = size / 2;
+
+  // White aerospace reflective dish coating
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(0, 0, size, size);
+
+  // Concentric panel segment rings
+  [60, 120, 180, 230].forEach((r) => {
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.stroke();
+  });
+
+  // Radial precision panel joins (36 radial segments)
+  ctx.strokeStyle = '#94a3b8';
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 36; i++) {
+    const a = (i / 36) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(a) * 30, cy + Math.sin(a) * 30);
+    ctx.lineTo(cx + Math.cos(a) * 245, cy + Math.sin(a) * 245);
+    ctx.stroke();
+  }
+
+  // Central Feed Subreflector Mount Flange
+  ctx.fillStyle = '#334155';
+  ctx.beginPath();
+  ctx.arc(cx, cy, 32, 0, Math.PI * 2);
+  ctx.fill();
+
+  const tex = new THREE.CanvasTexture(canvas);
+  textureCache['dsn_dish_surface'] = tex;
+  return tex;
+}
+
+/**
+ * 14. Modular Cargo Shipping Container Texture
+ */
+export function getCargoContainerTexture(variant: 'orange' | 'white' = 'orange'): THREE.CanvasTexture {
+  const cacheKey = `cargo_container_${variant}`;
+  if (textureCache[cacheKey]) return textureCache[cacheKey];
+  if (typeof window === 'undefined' || typeof document === 'undefined') return createFallback();
+
+  const size = 512;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d')!;
+
+  const baseColor = variant === 'orange' ? '#ea580c' : '#f1f5f9';
+  const corrugationDark = variant === 'orange' ? '#9a3412' : '#94a3b8';
+  ctx.fillStyle = baseColor;
+  ctx.fillRect(0, 0, size, size);
+
+  // Vertical corrugation ribs
+  const ribW = 24;
+  for (let x = 0; x < size; x += ribW) {
+    const grad = ctx.createLinearGradient(x, 0, x + ribW, 0);
+    grad.addColorStop(0, corrugationDark);
+    grad.addColorStop(0.3, baseColor);
+    grad.addColorStop(0.7, '#ffffff');
+    grad.addColorStop(1, corrugationDark);
+    ctx.fillStyle = grad;
+    ctx.fillRect(x, 0, ribW - 4, size);
+  }
+
+  // Corner structural reinforcement brackets
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(0, 0, 48, 48);
+  ctx.fillRect(size - 48, 0, 48, 48);
+  ctx.fillRect(0, size - 48, 48, 48);
+  ctx.fillRect(size - 48, size - 48, 48, 48);
+
+  // Hazard diagonal stripe banner
+  ctx.fillStyle = '#facc15';
+  ctx.fillRect(0, 80, size, 24);
+  ctx.fillStyle = '#0f172a';
+  for (let x = 0; x < size; x += 32) {
+    ctx.beginPath();
+    ctx.moveTo(x, 80);
+    ctx.lineTo(x + 16, 80);
+    ctx.lineTo(x + 32, 104);
+    ctx.lineTo(x + 16, 104);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  // Logistics stencils
+  ctx.fillStyle = variant === 'orange' ? '#0f172a' : '#0369a1';
+  ctx.font = 'bold 24px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('CRADLE // LOGISTICS', size / 2, size * 0.5);
+  ctx.font = 'bold 16px monospace';
+  ctx.fillText('MARS HABITAT CARGO CLASS-IV', size / 2, size * 0.58);
+
+  const tex = new THREE.CanvasTexture(canvas);
+  textureCache[cacheKey] = tex;
+  return tex;
+}
+
