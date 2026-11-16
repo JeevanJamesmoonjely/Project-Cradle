@@ -418,12 +418,13 @@ export const useMissionStore = create<MissionStore>((set, get) => ({
     const distV = Math.round(Math.hypot(dxV, dzV));
 
     if (meda.dustDevilActive && distV < 75) {
+      soundEngine.playVortexAlert();
       weatherAlert = {
         type: 'vortex',
         title: distV < 28 ? 'CRITICAL // CONVECTIVE VORTEX PROXIMITY' : 'NASA MEDA ALERT // CONVECTIVE DUST DEVIL',
         message: `Active vortex ${distV}m ${env.windCompass}. Tangential wind ${meda.windGustMs} m/s. Barometric drop -3.5 Pa.`,
-        description: `Active vortex ${distV}m ${env.windCompass}. Tangential wind ${meda.windGustMs} m/s.`,
-        recommendation: distV < 28 ? 'Counter-steer into wind and maintain drive traction' : 'Maintain safe perimeter or approach for solar panel cleaning',
+        description: `Active convective vortex ${distV}m ${env.windCompass} (Afternoon Solar Convection).`,
+        recommendation: distV < 28 ? 'Maintain drive traction or let vortex clean solar array' : 'Thermal updraft active — approach to sweep solar panels',
         severity: distV < 28 ? 'critical' : 'warning',
       };
     } else if (meda.weatherState === 'Regional Dust Storm') {
@@ -542,10 +543,14 @@ export const useMissionStore = create<MissionStore>((set, get) => ({
 
   toggleDustDevil: () => {
     soundEngine.playClick();
+    const willBeActive = !get().env.dustDevilActive;
+    if (willBeActive) {
+      soundEngine.playVortexAlert();
+    }
     set((s) => ({
       env: {
         ...s.env,
-        dustDevilActive: !s.env.dustDevilActive,
+        dustDevilActive: willBeActive,
       },
     }));
   },

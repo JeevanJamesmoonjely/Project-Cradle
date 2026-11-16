@@ -56,7 +56,7 @@ export function getVolumetricDustPuffTexture(): THREE.CanvasTexture {
     return new THREE.Texture() as THREE.CanvasTexture;
   }
 
-  const size = 128;
+  const size = 256;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
@@ -66,12 +66,12 @@ export function getVolumetricDustPuffTexture(): THREE.CanvasTexture {
   const center = size / 2;
   const gradient = ctx.createRadialGradient(center, center, 0, center, center, center);
 
-  // Pure ferric ochre and oxidized basalt dust - completely natural, no neon or white glow
-  gradient.addColorStop(0.0, 'rgba(180, 80, 36, 0.75)');   // dense dust core
-  gradient.addColorStop(0.25, 'rgba(195, 90, 42, 0.62)');  // mid billowing puff
-  gradient.addColorStop(0.55, 'rgba(175, 75, 32, 0.38)');  // outer cloud body
-  gradient.addColorStop(0.80, 'rgba(145, 60, 24, 0.14)');  // feathered rim
-  gradient.addColorStop(1.0, 'rgba(110, 45, 18, 0.0)');    // seamless zero alpha
+  // Pure high-fidelity Gaussian density distribution for realistic billowing dust plumes
+  gradient.addColorStop(0.0, 'rgba(255, 255, 255, 0.88)'); // Dense core
+  gradient.addColorStop(0.18, 'rgba(250, 242, 236, 0.72)'); // Mid billowing cloud
+  gradient.addColorStop(0.48, 'rgba(242, 228, 218, 0.44)'); // Expanding plume
+  gradient.addColorStop(0.75, 'rgba(230, 212, 198, 0.16)'); // Feathered boundary
+  gradient.addColorStop(1.0, 'rgba(200, 180, 160, 0.0)'); // Seamless transparent edge
 
   ctx.fillStyle = gradient;
   ctx.fillRect(0, 0, size, size);

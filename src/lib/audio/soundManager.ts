@@ -191,23 +191,119 @@ class PlanetarySoundEngine {
     });
   }
 
+  // Authentic, pleasant NASA telemetry advisory chime for meteorological alerts
+  private lastVortexAlertTime: number = 0;
+  public playVortexAlert() {
+    if (!this.ctx || this.isMuted) return;
+    this.ensureRunning();
+    const now = this.ctx.currentTime;
+    if (now - this.lastVortexAlertTime < 20.0) return; // Prevent spamming
+    this.lastVortexAlertTime = now;
+
+    // Elegant, soothing dual-tone NASA mission advisory chime (D5 -> A5 with soft harmonic overtone)
+    const tones = [
+      { freq: 587.33, start: 0, dur: 0.38, vol: 0.055 },
+      { freq: 880.0, start: 0.14, dur: 0.48, vol: 0.06 },
+      { freq: 1174.66, start: 0.14, dur: 0.42, vol: 0.02 },
+    ];
+
+    tones.forEach((t) => {
+      if (!this.ctx) return;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(t.freq, now + t.start);
+
+      gain.gain.setValueAtTime(0.0001, now + t.start);
+      gain.gain.exponentialRampToValueAtTime(t.vol, now + t.start + 0.035);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + t.start + t.dur);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now + t.start);
+      osc.stop(now + t.start + t.dur);
+    });
+  }
+
+  // Softened, non-disturbing general telemetry warning
   public playWarning() {
     if (!this.ctx || this.isMuted) return;
     this.ensureRunning();
     const now = this.ctx.currentTime;
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
-    osc.type = 'square';
-    osc.frequency.setValueAtTime(740, now);
-    osc.frequency.setValueAtTime(587, now + 0.12);
+    // Warm sine wave instead of harsh square wave
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(587.33, now);
+    osc.frequency.setValueAtTime(440.0, now + 0.12);
 
-    gain.gain.setValueAtTime(0.09, now);
-    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
+    gain.gain.setValueAtTime(0.04, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.28);
 
     osc.connect(gain);
     gain.connect(this.ctx.destination);
     osc.start(now);
-    osc.stop(now + 0.25);
+    osc.stop(now + 0.28);
+  }
+
+  // Dynamic low-frequency atmospheric swirling vortex sound (whoosh and regolith hiss)
+  private vortexGain: GainNode | null = null;
+  private vortexFilter: BiquadFilterNode | null = null;
+  private vortexSource: AudioBufferSourceNode | null = null;
+
+  public updateVortexProximitySound(distance: number) {
+    if (!this.ctx || this.isMuted) {
+      if (this.vortexGain && this.ctx) {
+        this.vortexGain.gain.setTargetAtTime(0, this.ctx.currentTime, 0.2);
+      }
+      return;
+    }
+    this.ensureRunning();
+
+    if (!this.vortexSource) {
+      // Create deep atmospheric brownian/pink noise loop for the spinning vortex updraft
+      const bufferSize = this.ctx.sampleRate * 3;
+      const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = buffer.getChannelData(0);
+      let b0 = 0, b1 = 0, b2 = 0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        b0 = 0.99 * b0 + white * 0.06;
+        b1 = 0.96 * b1 + white * 0.1;
+        b2 = 0.88 * b2 + white * 0.15;
+        data[i] = (b0 + b1 + b2) * 0.14;
+      }
+
+      this.vortexSource = this.ctx.createBufferSource();
+      this.vortexSource.buffer = buffer;
+      this.vortexSource.loop = true;
+
+      this.vortexFilter = this.ctx.createBiquadFilter();
+      this.vortexFilter.type = 'lowpass';
+      this.vortexFilter.frequency.setValueAtTime(140, this.ctx.currentTime);
+      this.vortexFilter.Q.setValueAtTime(1.8, this.ctx.currentTime);
+
+      this.vortexGain = this.ctx.createGain();
+      this.vortexGain.gain.setValueAtTime(0, this.ctx.currentTime);
+
+      this.vortexSource.connect(this.vortexFilter);
+      this.vortexFilter.connect(this.vortexGain);
+      this.vortexGain.connect(this.ctx.destination);
+      this.vortexSource.start();
+    }
+
+    const now = this.ctx.currentTime;
+    if (this.vortexGain && this.vortexFilter) {
+      if (distance < 70.0) {
+        const proximityFactor = Math.max(0, 1.0 - distance / 70.0);
+        const targetVol = Math.min(0.18, proximityFactor * 0.16);
+        const targetFreq = 100 + proximityFactor * 260; // Deep 100Hz rumble up to 360Hz swirling whoosh
+        this.vortexGain.gain.setTargetAtTime(targetVol, now, 0.15);
+        this.vortexFilter.frequency.setTargetAtTime(targetFreq, now, 0.15);
+      } else {
+        this.vortexGain.gain.setTargetAtTime(0, now, 0.3);
+      }
+    }
   }
 
   public playClick() {
@@ -609,6 +705,7 @@ class PlanetarySoundEngine {
       if (this.isMuted) {
         if (this.motorGain) this.motorGain.gain.setValueAtTime(0, this.ctx.currentTime);
         if (this.windGain) this.windGain.gain.setValueAtTime(0, this.ctx.currentTime);
+        if (this.vortexGain) this.vortexGain.gain.setValueAtTime(0, this.ctx.currentTime);
         if (this.rocketGain) this.rocketGain.gain.setValueAtTime(0, this.ctx.currentTime);
         if (this.plasmaGain) this.plasmaGain.gain.setValueAtTime(0, this.ctx.currentTime);
       } else {

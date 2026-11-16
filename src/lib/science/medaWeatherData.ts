@@ -208,10 +208,46 @@ export function calculateMedaAtmosphericTelemetry(
     : 0;
   const uvIndex = isSunUp ? Number((Math.max(0, sunElevation * 8.5 * Math.exp(-profile.baseTau * 0.4))).toFixed(1)) : 0;
 
-  // 7. Convective Dust Devil & Sandstorm Vortex Detection
-  // Triggers during regional dust storms (Sol 670), active dust devil seasons (Sol 540), or daytime convective insolation
-  const isDustStormEvent = profile.weatherClassification === 'Regional Dust Storm';
-  const dustDevilActive = isDustStormEvent || (isConvective && convectivePeak > 0.25) || profile.dustDevilLikelihood === 'High';
+  // 7. Authentic Convective Dust Devil Formation Physics Model
+  // Modeled strictly after NASA Perseverance MEDA & HiRISE satellite studies:
+  //
+  // A. Time of Day (Afternoon Peak):
+  // Driven exclusively by solar heating of the Martian surface. As the Sun warms the ground,
+  // surface air rapidly superheats and rises through the cooler air above (thermal updraft).
+  // Activity strictly peaks between 12:00 PM and 3:00 PM LST (12.0 - 15.0 LST).
+  // At night (<10.5 or >16.5 LST), the surface cools rapidly and the atmosphere stabilizes, stopping vortex formation completely.
+  let diurnalThermalUpdraft = 0;
+  if (t >= 10.5 && t <= 16.5) {
+    // Peak centered at 13.5 LST (1:30 PM local solar time)
+    diurnalThermalUpdraft = Math.sin(((t - 10.5) / 6.0) * Math.PI);
+  }
+
+  // B. Seasonal Cycles (Solar Longitude Ls):
+  // Spring & Summer (Ls 0° - 180°) have peak solar insolation and maximum ground-to-air lapse rates.
+  // Autumn (Ls 180° - 270°) and Winter (Ls 270° - 360°) see activity drop off dramatically.
+  const ls = profile.seasonLs;
+  let seasonalInsolationFactor = 0.08; // Baseline cold season
+  if (ls >= 0 && ls <= 180) {
+    // Spring & Summer peak
+    seasonalInsolationFactor = 0.6 + 0.4 * Math.sin((ls / 180) * Math.PI);
+  } else if (ls > 180 && ls <= 270) {
+    // Autumn decay
+    seasonalInsolationFactor = 0.25 * (1.0 - (ls - 180) / 90);
+  } else {
+    // Deep Winter minimal activity
+    seasonalInsolationFactor = 0.05;
+  }
+
+  // C. Global Dust Storm Suppression:
+  // Thick airborne dust blocks sunlight from penetrating to the ground.
+  // Shaded ground cannot generate the intense thermal plumes required for vortex spin-up.
+  const isRegionalDustStorm = profile.weatherClassification === 'Regional Dust Storm' || profile.baseTau > 1.6;
+  const dustStormSuppression = isRegionalDustStorm ? 0.0 : Math.max(0, 1.0 - Math.pow(profile.baseTau / 1.5, 2.0));
+
+  // Combined physical vortex generation index
+  const vortexIndex = diurnalThermalUpdraft * seasonalInsolationFactor * dustStormSuppression;
+  // Threshold for sustained vortex spin-up
+  const dustDevilActive = vortexIndex > 0.16;
 
   return {
     sol: profile.sol,
